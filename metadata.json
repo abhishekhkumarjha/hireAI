@@ -1,0 +1,6 @@
+{
+  "name": "HireAI — Intelligent Job Portal",
+  "description": "End-to-end AI-powered job portal with resume parsing, NL candidate search, screening scheduler, AI interview module, and offer letter generation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
