@@ -18,9 +18,10 @@ import {
 
 interface HeaderProps {
   onOpenMatrix: () => void;
+  onGoHome?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenMatrix }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
   const { currentUser, users, setCurrentUser, logoutUser, createInvite } = usePortal();
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -74,15 +75,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMatrix }) => {
     <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo */}
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Briefcase className="w-5 h-5 text-white" />
+        <div 
+          onClick={onGoHome} 
+          className={`flex items-center space-x-3 ${onGoHome ? 'cursor-pointer select-none hover:opacity-90 active:scale-[0.98] transition' : ''}`}
+        >
+          <div className="w-10 h-10 rounded-xl overflow-hidden border border-indigo-400/30 bg-slate-950 shadow-lg shadow-indigo-500/20">
+            <img src="/cloudinntech-logo.png" alt="CloudInnTech" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-bold text-lg text-white tracking-tight">HirePortal</span>
+              <span className="font-bold text-lg text-white tracking-tight">Zeptrax AI</span>
               <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                Recruitment Portal
+                Hire Portal
               </span>
             </div>
             <p className="text-xs text-slate-400 hidden sm:block">Talent Acquisition & Hiring System</p>

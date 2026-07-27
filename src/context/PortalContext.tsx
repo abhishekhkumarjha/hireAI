@@ -4,6 +4,7 @@ import {
   UserRole,
   CandidateProfile,
   CVItem,
+  ParsedCVData,
   Job,
   Application,
   InterviewRecord,
@@ -14,6 +15,7 @@ import {
   ApplicationStatus,
   ApplicationStage,
   SearchChatMessage,
+  PermissionMatrixItem,
 } from '../types/portal';
 import {
   INITIAL_USERS,
@@ -25,7 +27,10 @@ import {
   INITIAL_OFFER_TEMPLATES,
   INITIAL_OFFER_LETTERS,
   INITIAL_INVITE_TOKENS,
+  PERMISSION_MATRIX,
 } from '../data/initialData';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 interface PortalContextType {
   currentUser: User | null;
@@ -43,6 +48,7 @@ interface PortalContextType {
   aiSearchCriteria: any | null;
   isAiSearching: boolean;
   searchChatHistory: SearchChatMessage[];
+  permissionMatrix: PermissionMatrixItem[];
 
   // Actions
   switchRole: (role: UserRole) => void;
@@ -65,9 +71,11 @@ interface PortalContextType {
   signupCandidate: (name: string, email: string, password?: string, provider?: any) => User;
   signupViaInvite: (name: string, email: string, password?: string, token?: string, provider?: any) => User | null;
   logoutUser: () => void;
+  deleteUser: (userId: string) => boolean;
   updateOfferTemplate: (template: OfferTemplate) => void;
   associateCandidateWithJob: (candidateId: string, jobId: string) => Application;
   addManualInterviewEvaluation: (appId: string, evaluation: { overallScore: number; technicalScore: number; communicationScore: number; relevanceScore: number; summary: string }) => void;
+  submitAdmissionsApplication: (name: string, email: string, password?: string, profileDetails?: any, jobId?: string) => void;
 }
 
 const PortalContext = createContext<PortalContextType | undefined>(undefined);
@@ -95,7 +103,30 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [jobs, setJobs] = useState<Job[]>(() => {
     const saved = localStorage.getItem('hireai_jobs');
-    return saved ? JSON.parse(saved) : INITIAL_JOBS;
+    if (!saved) return INITIAL_JOBS;
+    const savedJobs: Job[] = JSON.parse(saved);
+    const savedById = new Map(savedJobs.map((job) => [job.id, job]));
+    const mergedInitialJobs = INITIAL_JOBS.map((job) => {
+      const savedJob = savedById.get(job.id);
+      const isCourse = job.id.includes('bootcamp');
+      return {
+        ...job,
+        ...savedJob,
+        // The supplied country-wise price schedule is authoritative for every master's course.
+        ...(isCourse ? {
+          salaryRange: job.salaryRange,
+          courseInfo: job.courseInfo ? {
+            ...job.courseInfo,
+            ...savedJob?.courseInfo,
+            regionalPricing: job.courseInfo.regionalPricing,
+          } : savedJob?.courseInfo,
+        } : {}),
+      };
+    });
+    const customJobs = savedJobs.filter((job) => !INITIAL_JOBS.some((initialJob) => initialJob.id === job.id));
+    // Preserve administrator changes while adding newly published master programs
+    // and their structured PDF-derived course information to existing portals.
+    return [...mergedInitialJobs, ...customJobs];
   });
 
   const [applications, setApplications] = useState<Application[]>(() => {
@@ -131,6 +162,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [aiSearchResults, setAiSearchResults] = useState<{ [candidateId: string]: AISearchResult } | null>(null);
   const [aiSearchCriteria, setAiSearchCriteria] = useState<any | null>(null);
   const [isAiSearching, setIsAiSearching] = useState<boolean>(false);
+  const [permissionMatrix] = useState<PermissionMatrixItem[]>(PERMISSION_MATRIX);
 
   // Sync to localStorage
   useEffect(() => { localStorage.setItem('hireai_users', JSON.stringify(users)); }, [users]);
@@ -154,7 +186,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Clean old mock data if present to ensure 1 admin and fresh signup states
   useEffect(() => {
     const raw = localStorage.getItem('hireai_users');
-    if (raw && (raw.includes('usr_cand_priya') || !raw.includes('abhishek.jha@cloudinntech.co.in'))) {
+    if (raw && !raw.includes('abhishek.jha@cloudinntech.co.in')) {
       localStorage.clear();
       window.location.reload();
     }
@@ -185,6 +217,71 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => window.removeEventListener('storage', handleStorageSync);
   }, []);
 
+  // Polling mechanism for cross-portal sync (backup for storage event)
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      const storedUsers = localStorage.getItem('hireai_users');
+      const storedApplications = localStorage.getItem('hireai_applications');
+      const storedInterviews = localStorage.getItem('hireai_interviews');
+      const storedOffers = localStorage.getItem('hireai_offer_letters');
+      const storedInvites = localStorage.getItem('hireai_invites');
+      const storedJobs = localStorage.getItem('hireai_jobs');
+      const storedProfiles = localStorage.getItem('hireai_candidate_profiles');
+      const storedCvs = localStorage.getItem('hireai_cvs');
+
+      if (storedUsers) {
+        const parsed = JSON.parse(storedUsers);
+        if (JSON.stringify(parsed) !== JSON.stringify(users)) {
+          setUsers(parsed);
+        }
+      }
+      if (storedApplications) {
+        const parsed = JSON.parse(storedApplications);
+        if (JSON.stringify(parsed) !== JSON.stringify(applications)) {
+          setApplications(parsed);
+        }
+      }
+      if (storedInterviews) {
+        const parsed = JSON.parse(storedInterviews);
+        if (JSON.stringify(parsed) !== JSON.stringify(interviews)) {
+          setInterviews(parsed);
+        }
+      }
+      if (storedOffers) {
+        const parsed = JSON.parse(storedOffers);
+        if (JSON.stringify(parsed) !== JSON.stringify(offerLetters)) {
+          setOfferLetters(parsed);
+        }
+      }
+      if (storedInvites) {
+        const parsed = JSON.parse(storedInvites);
+        if (JSON.stringify(parsed) !== JSON.stringify(invites)) {
+          setInvites(parsed);
+        }
+      }
+      if (storedJobs) {
+        const parsed = JSON.parse(storedJobs);
+        if (JSON.stringify(parsed) !== JSON.stringify(jobs)) {
+          setJobs(parsed);
+        }
+      }
+      if (storedProfiles) {
+        const parsed = JSON.parse(storedProfiles);
+        if (JSON.stringify(parsed) !== JSON.stringify(candidateProfiles)) {
+          setCandidateProfiles(parsed);
+        }
+      }
+      if (storedCvs) {
+        const parsed = JSON.parse(storedCvs);
+        if (JSON.stringify(parsed) !== JSON.stringify(cvs)) {
+          setCvs(parsed);
+        }
+      }
+    }, 2000); // Poll every 2 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [users, applications, interviews, offerLetters, invites, jobs, candidateProfiles, cvs]);
+
   const switchRole = (role: UserRole) => {
     const found = users.find((u) => u.role === role);
     if (found) {
@@ -193,6 +290,9 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const loginUser = (email: string, password?: string): boolean => {
+    if (!password || password.length < 6) {
+      return false;
+    }
     const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (found) {
       if (found.password && found.password !== password) {
@@ -208,7 +308,36 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCurrentUser(null);
   };
 
-  const signupCandidate = (name: string, email: string, password?: string, provider = 'email'): User => {
+  const deleteUser = (userId: string): boolean => {
+    if (currentUser?.role !== 'super_admin' || userId === currentUser.id) return false;
+    const target = users.find((user) => user.id === userId);
+    // Super-admin accounts are protected to avoid removing the platform authority.
+    if (!target || target.role === 'super_admin') return false;
+
+    setUsers((prev) => prev.filter((user) => user.id !== userId));
+
+    if (target.role === 'candidate') {
+      setCandidateProfiles((prev) => prev.filter((profile) => profile.userId !== userId));
+      setCvs((prev) => prev.filter((cv) => cv.candidateId !== userId));
+      setApplications((prev) => prev.filter((application) => application.candidateId !== userId));
+      setInterviews((prev) => prev.filter((interview) => interview.candidateId !== userId));
+      setOfferLetters((prev) => prev.filter((offer) => offer.candidateId !== userId));
+    } else {
+      // Keep organisational records available, but transfer listings to Super Admin ownership.
+      setJobs((prev) => prev.map((job) => job.postedBy === userId ? { ...job, postedBy: currentUser.id } : job));
+    }
+
+    setInvites((prev) => prev.filter((invite) => invite.email.toLowerCase() !== target.email.toLowerCase()));
+    return true;
+  };
+
+  const signupCandidate = (name: string, email: string, password?: string, provider: User['provider'] = 'email'): User => {
+    if (provider === 'email' && (!password || password.length < 6)) {
+      throw new Error('Password must be at least 6 characters');
+    }
+    if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
+      throw new Error('Email already registered');
+    }
     const newUser: User = {
       id: `usr_cand_${Date.now()}`,
       name,
@@ -246,7 +375,10 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return newUser;
   };
 
-  const signupViaInvite = (name: string, email: string, password?: string, token?: string, provider = 'email'): User | null => {
+  const signupViaInvite = (name: string, email: string, password?: string, token?: string, provider: User['provider'] = 'email'): User | null => {
+    if (provider === 'email' && (!password || password.length < 6)) {
+      throw new Error('Password must be at least 6 characters');
+    }
     const inviteIdx = invites.findIndex(inv => inv.token === token && inv.status === 'pending');
     if (inviteIdx === -1) return null;
     
@@ -282,6 +414,9 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const createJob = (jobData: Omit<Job, 'id' | 'createdAt' | 'postedBy'>): Job => {
+    if (!currentUser || currentUser.role === 'candidate') {
+      throw new Error('Only administrators and recruiters can create listings.');
+    }
     const newJob: Job = {
       ...jobData,
       id: `job_${Date.now()}`,
@@ -293,6 +428,13 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const updateJob = (updated: Job) => {
+    const existing = jobs.find((job) => job.id === updated.id);
+    if (!existing || !currentUser) return;
+    const isCourse = existing.id.includes('bootcamp');
+    const canEdit = currentUser.role === 'super_admin'
+      || (currentUser.role === 'admin' && isCourse)
+      || (currentUser.role === 'recruiter' && !isCourse && existing.postedBy === currentUser.id);
+    if (!canEdit) return;
     setJobs((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
   };
 
@@ -363,6 +505,15 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     status: ApplicationStatus,
     notes?: string
   ) => {
+    const target = applications.find((application) => application.id === appId);
+    const targetJob = target && jobs.find((job) => job.id === target.jobId);
+    if (!target || !targetJob || !currentUser) return;
+    const isCourse = targetJob.id.includes('bootcamp');
+    const canUpdate = currentUser.role === 'super_admin'
+      || (currentUser.role === 'admin' && isCourse)
+      || (currentUser.role === 'recruiter' && !isCourse && targetJob.postedBy === currentUser.id)
+      || (currentUser.role === 'candidate' && target.candidateId === currentUser.id);
+    if (!canUpdate) return;
     setApplications((prev) =>
       prev.map((app) =>
         app.id === appId
@@ -378,7 +529,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const parseCVAndSave = async (rawText: string, cvTitle: string): Promise<CVItem> => {
-    const res = await fetch('/api/parse-cv', {
+    const res = await fetch(`${API_BASE}/api/parse-cv`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cvText: rawText }),
@@ -501,7 +652,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         };
       });
 
-      const res = await fetch('/api/recruiter/ai-search', {
+      const res = await fetch(`${API_BASE}/api/recruiter/ai-search`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, candidates: candidateData, history: updatedHistory }),
@@ -543,7 +694,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const job = jobs.find((j) => j.id === app?.jobId);
     const profile = candidateProfiles.find((p) => p.userId === app?.candidateId);
 
-    const res = await fetch('/api/ai-interview/generate', {
+    const res = await fetch(`${API_BASE}/api/ai-interview/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -589,7 +740,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       };
     });
 
-    const res = await fetch('/api/ai-interview/evaluate', {
+    const res = await fetch(`${API_BASE}/api/ai-interview/evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -648,7 +799,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const template = offerTemplates[0];
 
-    const res = await fetch('/api/offer-letter/generate', {
+    const res = await fetch(`${API_BASE}/api/offer-letter/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -708,14 +859,35 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         response === 'accepted' ? 'offer_accepted' : 'offer_declined',
         `Candidate ${response} the offer letter.`
       );
+      if (response === 'accepted') {
+        // Keep user role as 'candidate' and upgrade enrollmentStatus in profiles
+        setCandidateProfiles((prev) =>
+          prev.map((p) =>
+            p.userId === offer.candidateId
+              ? {
+                  ...p,
+                  enrollmentStatus: 'student',
+                  applicationProgress: 100,
+                  bio: (p.bio || '') + `\n\nStudent ID: STU-2026-X${offer.candidateId.slice(-4).toUpperCase()}`
+                }
+              : p
+          )
+        );
+        // Sync current user state if they are the one accepting (role remains 'candidate')
+        if (currentUser && currentUser.id === offer.candidateId) {
+          const updatedUser = { ...currentUser };
+          setCurrentUser(updatedUser);
+          localStorage.setItem('hireai_current_user', JSON.stringify(updatedUser));
+        }
+      }
     }
   };
 
-  const createInvite = (role: 'admin' | 'recruiter', email: string): InviteToken => {
+  const createInvite = (role: 'admin' | 'recruiter', email: string, invitedName?: string): InviteToken => {
     const newInvite: InviteToken = {
       id: `inv_${Date.now()}`,
       invitedBy: currentUser?.id || 'usr_super_admin',
-      invitedByName: currentUser?.name || 'Alex Vance',
+      invitedByName: invitedName || currentUser?.name || 'Alex Vance',
       role,
       email,
       token: `inv_token_${role}_${Math.floor(1000 + Math.random() * 9000)}`,
@@ -726,6 +898,106 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     setInvites((prev) => [newInvite, ...prev]);
     return newInvite;
+  };
+
+  const submitAdmissionsApplication = (
+    name: string,
+    email: string,
+    password?: string,
+    profileDetails?: any,
+    jobId?: string
+  ) => {
+    const newUserId = `usr_${Date.now()}`;
+    const newUser = {
+      id: newUserId,
+      name,
+      email,
+      password: password || 'password123',
+      role: 'candidate' as const,
+      provider: 'email' as const,
+      createdAt: new Date().toISOString()
+    };
+    
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
+    localStorage.setItem('hireai_users', JSON.stringify(updatedUsers));
+
+    const newProfileId = `prof_${Date.now()}`;
+    const newProfile = {
+      id: newProfileId,
+      userId: newUserId,
+      fullName: name,
+      email,
+      phone: profileDetails?.phone || '',
+      location: profileDetails?.location || 'Noida',
+      bio: profileDetails?.bio || '',
+      experienceYears: Number(profileDetails?.experienceYears) || 0,
+      expectedSalary: '₹8,00,000 / yr',
+      availability: 'Immediate',
+      openToWork: true,
+      domain: 'Engineering' as const,
+      skills: profileDetails?.skills || [],
+      experience: profileDetails?.experience || [],
+      education: profileDetails?.education || [],
+      certifications: [],
+      githubUrl: profileDetails?.githubUrl || '',
+      linkedinUrl: profileDetails?.linkedinUrl || '',
+      portfolioUrl: profileDetails?.portfolioUrl || '',
+      admissionScore: profileDetails?.admissionScore || 85,
+      applicationProgress: 100,
+      enrollmentStatus: 'applicant' as const
+    };
+
+    const updatedProfiles = [...candidateProfiles, newProfile];
+    setCandidateProfiles(updatedProfiles);
+    localStorage.setItem('hireai_candidate_profiles', JSON.stringify(updatedProfiles));
+
+    let newCvId = 'no_cv';
+    if (profileDetails?.cvText) {
+      const newCv = {
+        id: `cv_${Date.now()}`,
+        candidateId: newUserId,
+        title: `${name} Resume`,
+        isPrimary: true,
+        rawText: profileDetails.cvText,
+        parsedData: {
+          fullName: name,
+          email,
+          phone: profileDetails.phone || '',
+          location: profileDetails.location || '',
+          summary: profileDetails.bio || '',
+          experienceYears: Number(profileDetails.experienceYears) || 0,
+          expectedSalary: '₹8,00,000 / yr',
+          availability: 'Immediate',
+          skills: profileDetails.skills || [],
+          experience: profileDetails.experience || [],
+          education: profileDetails.education || [],
+          certifications: []
+        },
+        updatedAt: new Date().toISOString()
+      };
+      newCvId = newCv.id;
+      const updatedCvs = [...cvs, newCv];
+      setCvs(updatedCvs);
+      localStorage.setItem('hireai_cvs', JSON.stringify(updatedCvs));
+    }
+
+    const newApp = {
+      id: `app_${Date.now()}`,
+      jobId: jobId || 'job_ai_bootcamp',
+      candidateId: newUserId,
+      cvId: newCvId,
+      status: 'shortlisted' as const,
+      stage: 2 as const,
+      interviewType: 'ai' as const,
+      appliedAt: new Date().toISOString()
+    };
+    const updatedApps = [...applications, newApp];
+    setApplications(updatedApps);
+    localStorage.setItem('hireai_applications', JSON.stringify(updatedApps));
+
+    setCurrentUser(newUser);
+    localStorage.setItem('hireai_current_user', JSON.stringify(newUser));
   };
 
   return (
@@ -746,6 +1018,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         aiSearchCriteria,
         isAiSearching,
         searchChatHistory,
+        permissionMatrix,
         switchRole,
         createJob,
         updateJob,
@@ -766,9 +1039,11 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         signupCandidate,
         signupViaInvite,
         logoutUser,
+        deleteUser,
         updateOfferTemplate,
         associateCandidateWithJob,
         addManualInterviewEvaluation,
+        submitAdmissionsApplication,
       }}
     >
       {children}

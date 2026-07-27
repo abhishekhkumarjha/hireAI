@@ -80,6 +80,12 @@ export interface CandidateProfile {
   experience: WorkExperience[];
   education: Education[];
   certifications: Certification[];
+  githubUrl?: string;
+  portfolioUrl?: string;
+  linkedinUrl?: string;
+  admissionScore?: number;
+  applicationProgress?: number;
+  enrollmentStatus?: 'applicant' | 'student' | 'free_learner';
 }
 
 export interface Job {
@@ -96,6 +102,25 @@ export interface Job {
   postedBy: string; // userId
   createdAt: string;
   interviewTypeDefault: 'ai' | 'human';
+  courseInfo?: CourseInfo;
+}
+
+export interface CourseInfo {
+  duration: string;
+  schedule: string;
+  format: string;
+  contentHours: string;
+  practice: string;
+  projects: string;
+  technology: string;
+  experience: string;
+  guidance: string;
+  careerPrep: string;
+  certification: string;
+  placement: string;
+  entrepreneurship: string;
+  access: string;
+  regionalPricing: Record<string, string>;
 }
 
 export type ApplicationStage = 1 | 2 | 3 | 4; 

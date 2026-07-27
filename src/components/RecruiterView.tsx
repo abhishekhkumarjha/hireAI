@@ -1,47 +1,44 @@
 import React, { useState } from 'react';
 import { usePortal } from '../context/PortalContext';
-import { Job, Application } from '../types/portal';
+import { Application, CandidateProfile, Job, User } from '../types/portal';
 import {
-  Sparkles,
   Search,
   CheckCircle2,
-  Clock,
-  Calendar,
-  Play,
-  FileCheck,
-  UserCheck,
   XCircle,
-  PlusCircle,
+  Clock,
+  UserCheck,
   Briefcase,
-  MapPin,
-  DollarSign,
+  SlidersHorizontal,
   ChevronRight,
-  Send,
-  Zap,
+  ExternalLink,
+  Github,
+  Linkedin,
+  Globe,
   Award,
-  Video,
+  Calendar,
+  Send,
+  BookOpen,
+  Filter,
+  Users,
+  MessageSquare,
+  Sparkles,
+  Play,
   FileText,
-  X,
-  AlertCircle,
-  Check,
+  X
 } from 'lucide-react';
 
 export const RecruiterView: React.FC = () => {
   const {
     currentUser,
-    jobs,
     candidateProfiles,
-    cvs,
+    jobs,
     applications,
     interviews,
     offerLetters,
-    aiSearchResults,
-    aiSearchCriteria,
-    isAiSearching,
-    searchChatHistory,
+    offerTemplates,
+    cvs,
     runAISearch,
     clearSearchChat,
-    createJob,
     scheduleScreeningCall,
     startAIInterview,
     updateApplicationStage,
@@ -51,1089 +48,667 @@ export const RecruiterView: React.FC = () => {
     addManualInterviewEvaluation,
   } = usePortal();
 
-  const [activeTab, setActiveTab] = useState<'search' | 'jobs' | 'pipeline'>('search');
+  // Navigation states
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'admissions' | 'aiSearch'>('admissions');
+  const [activeStatusTab, setActiveStatusTab] = useState<'pending' | 'approved' | 'rejected' | 'interview'>('pending');
 
-  // Search input
-  const [nlQuery, setNlQuery] = useState(
-    'Find candidates with 5+ years React and Node, based in Pune or remote, available immediately.'
-  );
-  const [refineQuery, setRefineQuery] = useState('');
+  // Filters state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterProgram, setFilterProgram] = useState('All');
+  const [filterExp, setFilterExp] = useState('All');
+  const [filterLocation, setFilterLocation] = useState('All');
 
-  const presetQueries = [
-    'Find candidates with 5+ years React and Node, based in Pune, available immediately.',
-    'Senior AI Engineer skilled in Gemini API, PyTorch, and RAG pipelines.',
-    'Full-stack developers with Kubernetes and Docker experience under ₹12 Lakhs expected salary.',
-  ];
+  // AI query search states
+  const [nlQuery, setNlQuery] = useState('Find candidates with Python skills who scored above 90% in admissions.');
+  const [isAiSearching, setIsAiSearching] = useState(false);
+  const [aiSearchResults, setAiSearchResults] = useState<any[]>([]);
 
-  // Create Job Modal
-  const [showCreateJobModal, setShowCreateJobModal] = useState(false);
-  const [newJobTitle, setNewJobTitle] = useState('');
-  const [newJobCompany, setNewJobCompany] = useState('TechScale Innovations');
-  const [newJobDomain, setNewJobDomain] = useState<'Engineering' | 'Product' | 'Design' | 'Data & AI' | 'DevOps' | 'Marketing'>('Engineering');
-  const [newJobSalary, setNewJobSalary] = useState('₹12,00,000 - ₹18,00,000');
-  const [newJobLocation, setNewJobLocation] = useState('Remote');
-  const [newJobDesc, setNewJobDesc] = useState('');
-  const [newJobReqs, setNewJobReqs] = useState('React, Node.js, TypeScript, PostgreSQL');
+  const [selectedAppForOffer, setSelectedAppForOffer] = useState<Application | null>(null);
+  const [selectedAppForInterview, setSelectedAppForInterview] = useState<Application | null>(null);
+  const [openAppId, setOpenAppId] = useState<string | null>(null);
+  const [interviewNotesText, setInterviewNotesText] = useState('');
+  const [overallFitText, setOverallFitText] = useState('Excellent match for Gen AI track');
+  
+  // Admission Offer inputs
+  const [offerSalary, setOfferSalary] = useState('₹12,00,050 / yr');
+  const [offerJoiningDate, setOfferJoiningDate] = useState('2026-08-15');
+  const [customNotes, setCustomNotes] = useState('Standard cohort equipment allowance applies.');
+  const [isReleasingOffer, setIsReleasingOffer] = useState(false);
 
-  // Offer Modal State
-  const [offerApp, setOfferApp] = useState<Application | null>(null);
-  const [offerSalary, setOfferSalary] = useState('₹15,00,000 / year');
-  const [offerJoiningDate, setOfferJoiningDate] = useState('2026-03-15');
-  const [isGeneratingOffer, setIsGeneratingOffer] = useState(false);
+  // Interview Schedule inputs
+  const [interviewTimeSlot, setInterviewTimeSlot] = useState('2026-08-01T11:30:00Z');
 
-  // Pipeline controls & template state
-  const [calendarSync, setCalendarSync] = useState(true);
-  const [interviewTypes, setInterviewTypes] = useState<{[appId: string]: 'ai' | 'human'}>({});
-  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
-  const [templateBody, setTemplateBody] = useState('');
-  const [templateBenefits, setTemplateBenefits] = useState('');
-
-  // Human Interview Grading State
-  const [gradingApp, setGradingApp] = useState<Application | null>(null);
-  const [techScore, setTechScore] = useState(85);
-  const [commScore, setCommScore] = useState(80);
-  const [relScore, setRelScore] = useState(85);
-  const [interviewSummary, setInterviewSummary] = useState('');
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nlQuery.trim()) return;
-    runAISearch(nlQuery, false);
-  };
-
-  const handleRefineSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!refineQuery.trim()) return;
-    runAISearch(refineQuery, true);
-    setRefineQuery('');
-  };
-
-  const handleSaveTemplate = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (offerTemplates.length > 0) {
-      updateOfferTemplate(
-        offerTemplates[0].id,
-        templateBody,
-        templateBenefits.split(',').map((s) => s.trim()).filter(Boolean)
-      );
-      setIsEditingTemplate(false);
-      alert('Offer letter template updated successfully!');
-    }
-  };
-
-  const startEditingTemplate = () => {
-    if (offerTemplates.length > 0) {
-      setTemplateBody(offerTemplates[0].bodyTemplate);
-      setTemplateBenefits(offerTemplates[0].benefitsList.join(', '));
-      setIsEditingTemplate(true);
-    }
-  };
-
-  const handleCreateJobSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createJob({
-      title: newJobTitle,
-      company: newJobCompany,
-      location: newJobLocation,
-      type: 'Full-time',
-      domain: newJobDomain,
-      salaryRange: newJobSalary,
-      description: newJobDesc || `We are looking for a skilled ${newJobTitle} to join our engineering team.`,
-      requirements: newJobReqs.split(',').map((s) => s.trim()),
-      status: 'active',
-      interviewTypeDefault: 'ai',
+  // -------------------------------------------------------------
+  // ADMISSIONS FILTER LOGIC
+  // -------------------------------------------------------------
+  
+  const getApplicationsForRole = () => {
+    return applications.filter(app => {
+      const job = jobs.find(j => j.id === app.jobId);
+      if (!job) return false;
+      // Courses are reviewed by Admin and Super Admin only!
+      if (job.id.includes('bootcamp')) {
+        return false;
+      }
+      // Recruiters see Job Postings:
+      if (currentUser?.role === 'recruiter') {
+        if (currentUser?.email === 'rahul@zeptrax.ai' && job.id !== 'job_senior_dev') {
+          return false;
+        }
+        if (currentUser?.email === 'john@zeptrax.ai' && job.id !== 'job_security_analyst') {
+          return false;
+        }
+      }
+      return true;
     });
-    setShowCreateJobModal(false);
-    setNewJobTitle('');
-    setActiveTab('jobs');
   };
+
+  const roleApps = getApplicationsForRole();
+
+  const getFilteredApplications = () => {
+    return roleApps.filter(app => {
+      const profile = candidateProfiles.find(p => p.userId === app.candidateId);
+      const job = jobs.find(j => j.id === app.jobId);
+      if (!profile || !job) return false;
+
+      // Status check based on active tab
+      const matchesTab = 
+        activeStatusTab === 'pending' ? (app.status === 'applied' || app.status === 'shortlisted' || app.status === 'applied') :
+        activeStatusTab === 'approved' ? (app.status === 'selected' || app.status === 'offer_sent' || app.status === 'offer_accepted') :
+        activeStatusTab === 'rejected' ? (app.status === 'rejected') :
+        activeStatusTab === 'interview' ? (app.status === 'screening_scheduled' || app.status === 'interviewing') :
+        false;
+
+      if (!matchesTab) return false;
+
+      // Search query check
+      const matchesSearch = profile.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            profile.email.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
+
+      // Program check
+      const matchesProgram = filterProgram === 'All' || job.title === filterProgram;
+      if (!matchesProgram) return false;
+
+      // Experience check
+      let matchesExp = true;
+      if (filterExp !== 'All') {
+        if (filterExp === 'Fresher') matchesExp = profile.experienceYears === 0;
+        else if (filterExp === '1-2 Years') matchesExp = profile.experienceYears > 0 && profile.experienceYears <= 2;
+        else if (filterExp === '3+ Years') matchesExp = profile.experienceYears > 2;
+      }
+      if (!matchesExp) return false;
+
+      // Location / Country check
+      const matchesLocation = filterLocation === 'All' || profile.location.toLowerCase().includes(filterLocation.toLowerCase());
+      if (!matchesLocation) return false;
+
+      return true;
+    });
+  };
+
+  const filteredApps = getFilteredApplications();
+
+  // Counts for tabs based on role assignments
+  const pendingCount = roleApps.filter(a => a.status === 'applied' || a.status === 'shortlisted').length;
+  const approvedCount = roleApps.filter(a => a.status === 'selected' || a.status === 'offer_sent' || a.status === 'offer_accepted').length;
+  const rejectedCount = roleApps.filter(a => a.status === 'rejected').length;
+  const interviewCount = roleApps.filter(a => a.status === 'screening_scheduled' || a.status === 'interviewing').length;
+
+  // -------------------------------------------------------------
+  // ACTIONS HANDLERS
+  // -------------------------------------------------------------
 
   const handleReleaseOfferSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!offerApp) return;
-    setIsGeneratingOffer(true);
+    if (!selectedAppForOffer) return;
+    
+    setIsReleasingOffer(true);
     try {
-      await releaseOfferLetter(offerApp.id, offerSalary, offerJoiningDate);
-      alert('Offer letter generated with AI template & released to candidate via email!');
-      setOfferApp(null);
-      setActiveTab('pipeline');
-    } catch (err: any) {
-      alert('Failed to release offer: ' + err.message);
+      // release offer letter
+      await releaseOfferLetter(selectedAppForOffer.id, offerSalary, offerJoiningDate, customNotes);
+      alert('Admission Offer Released Successfully!');
+      setSelectedAppForOffer(null);
+    } catch (err) {
+      console.error(err);
     } finally {
-      setIsGeneratingOffer(false);
+      setIsReleasingOffer(false);
     }
+  };
+
+  const handleScheduleInterviewSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAppForInterview) return;
+
+    scheduleScreeningCall(selectedAppForInterview.id, interviewTimeSlot);
+    alert('Admissions Interview Scheduled successfully!');
+    setSelectedAppForInterview(null);
+  };
+
+  const handleRejectApplication = (appId: string) => {
+    if (confirm('Are you sure you want to reject this admissions file?')) {
+      updateApplicationStage(appId, 3, 'rejected', 'Admissions profile reviewed and rejected by Course Admin.');
+    }
+  };
+
+  const handleRequestMoreInfo = (appId: string) => {
+    const reason = prompt("Describe what details are missing (e.g. Portfolio link, higher education degree):", "Please add your portfolio URL.");
+    if (reason) {
+      updateApplicationStage(appId, 1, 'need_more_info', reason);
+      alert('Application updated to Need More Info!');
+    }
+  };
+
+  const handleApproveRegistration = (appId: string) => {
+    updateApplicationStage(appId, 1, 'under_review', 'Admissions request approved. Candidate is allowed to enter academic/work details.');
+    alert('Application request approved! Candidate can now sign in and complete the details.');
+  };
+
+  // AI Sourcing Slices
+  const handleAISearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nlQuery.trim()) return;
+
+    setIsAiSearching(true);
+    setTimeout(() => {
+      setIsAiSearching(false);
+      // Filter candidate profiles locally to mock
+      const match = candidateProfiles.filter(p => p.admissionScore && p.admissionScore >= 80);
+      setAiSearchResults(match);
+    }, 1200);
   };
 
   return (
     <div className="space-y-6">
-      {/* Recruiter Navigation Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setActiveTab('search')}
-            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
-              activeTab === 'search'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80'
-            }`}
-          >
-            <Sparkles className="w-4 h-4 text-indigo-300" />
-            <span>AI Natural Language Search</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('pipeline')}
-            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
-              activeTab === 'pipeline'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Automation Pipeline ({applications.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('jobs')}
-            className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
-              activeTab === 'jobs'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80'
-            }`}
-          >
-            <Briefcase className="w-4 h-4" />
-            <span>Posted Jobs ({jobs.length})</span>
-          </button>
-        </div>
-
+      
+      {/* Workspace Selector Tabs */}
+      <div className="flex border-b border-slate-800 gap-4">
         <button
-          onClick={() => setShowCreateJobModal(true)}
-          className="flex items-center space-x-2 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition"
+          onClick={() => setActiveWorkspaceTab('admissions')}
+          className={`pb-3 font-extrabold text-sm transition-all flex items-center gap-2 border-b-2 ${
+            activeWorkspaceTab === 'admissions'
+              ? 'border-cyan-500 text-white'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
         >
-          <PlusCircle className="w-4 h-4" />
-          <span>Post New Job</span>
+          <Users className="w-4 h-4 text-cyan-400" />
+          <span>Cohort Admissions Panel</span>
+        </button>
+        <button
+          onClick={() => setActiveWorkspaceTab('aiSearch')}
+          className={`pb-3 font-extrabold text-sm transition-all flex items-center gap-2 border-b-2 ${
+            activeWorkspaceTab === 'aiSearch'
+              ? 'border-cyan-500 text-white'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-indigo-400" />
+          <span>AI Admissions Query Search</span>
         </button>
       </div>
 
-      {/* TAB 1: NATURAL-LANGUAGE CV SEARCH WITH CONVERSATIONAL REFINEMENT */}
-      {activeTab === 'search' && (
+      {activeWorkspaceTab === 'admissions' ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-              <div className="flex items-center space-x-3 pb-3 border-b border-slate-800">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
-                  <Sparkles className="w-5 h-5" />
+          
+          {/* Filters & Search Block */}
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-md space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search applicant name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 hover:border-slate-700 focus:border-cyan-500/50 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white focus:outline-none placeholder-slate-600"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                
+                {/* Program filter */}
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-slate-500"><Filter className="w-3.5 h-3.5 inline mr-1" />Program:</span>
+                  <select
+                    value={filterProgram}
+                    onChange={(e) => setFilterProgram(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300"
+                  >
+                    <option value="All">All Bootcamps</option>
+                    <option value="AI Engineer Bootcamp">AI Engineer Bootcamp</option>
+                    <option value="DevOps Systems Masters">DevOps Systems Masters</option>
+                  </select>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-white">Natural-Language Candidate Search</h2>
-                  <p className="text-xs text-slate-400">
-                    Search using conversational phrases. Gemini AI extracts structured criteria + ranks semantic vector embeddings.
-                  </p>
+
+                {/* Experience filter */}
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-slate-500">Exp:</span>
+                  <select
+                    value={filterExp}
+                    onChange={(e) => setFilterExp(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300"
+                  >
+                    <option value="All">All Levels</option>
+                    <option value="Fresher">Freshers</option>
+                    <option value="1-2 Years">1-2 Years</option>
+                    <option value="3+ Years">3+ Years</option>
+                  </select>
+                </div>
+
+                {/* Location / Country filter */}
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-slate-500">Location:</span>
+                  <select
+                    value={filterLocation}
+                    onChange={(e) => setFilterLocation(e.target.value)}
+                    className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300"
+                  >
+                    <option value="All">All Cities</option>
+                    <option value="Noida">Noida</option>
+                    <option value="Mumbai">Mumbai</option>
+                    <option value="Delhi">Delhi</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Application status sub-tabs */}
+            <div className="flex border-t border-slate-800/80 pt-4 gap-2 text-xs font-bold uppercase tracking-wider">
+              {[
+                { key: 'pending' as const, label: `Pending Admissions (${pendingCount})`, color: 'text-indigo-400 border-indigo-500' },
+                { key: 'approved' as const, label: `Approved Enrolled (${approvedCount})`, color: 'text-emerald-400 border-emerald-500' },
+                { key: 'interview' as const, label: `Interviews scheduled (${interviewCount})`, color: 'text-amber-400 border-amber-500' },
+                { key: 'rejected' as const, label: `Rejected applicants (${rejectedCount})`, color: 'text-red-400 border-red-500' }
+              ].map((tab, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveStatusTab(tab.key)}
+                  className={`px-4 py-2 border rounded-xl transition ${
+                    activeStatusTab === tab.key
+                      ? `bg-slate-950 border-cyan-500/40 text-cyan-300 shadow`
+                      : 'bg-slate-950/40 border-slate-850 text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {filteredApps.length === 0 ? (
+              <div className="py-12 border border-dashed border-slate-800 rounded-2xl text-center text-slate-500 text-xs">
+                No active applications match the filters or search parameters.
+              </div>
+            ) : (
+              filteredApps.map((app, idx) => {
+                const profile = candidateProfiles.find(p => p.userId === app.candidateId);
+                const job = jobs.find(j => j.id === app.jobId);
+                if (!profile || !job) return null;
+
+                const hasCv = cvs.some(c => c.candidateId === profile.userId);
+                const hasPortfolio = !!profile.portfolioUrl;
+
+                return (
+                  <div key={idx} className="p-5 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-800 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black tracking-widest px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                          {job.title.includes("DevOps") ? "Cybersecurity & DevOps" : "AI Engineering"}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-extrabold text-white">{profile.fullName}</h4>
+                      <div className="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 font-medium">
+                        <span className={hasCv ? "text-emerald-400" : "text-slate-600"}>
+                          Resume {hasCv ? "✓" : "✗"}
+                        </span>
+                        <span>•</span>
+                        <span className={hasPortfolio ? "text-emerald-400" : "text-slate-650"}>
+                          Portfolio {hasPortfolio ? "✓" : "✗"}
+                        </span>
+                        <span>•</span>
+                        <span>Assessment: <span className="text-indigo-400 font-extrabold">{profile.admissionScore ? `${profile.admissionScore}%` : "Pending"}</span></span>
+                        <span>•</span>
+                        <span>Experience: <span className="text-slate-350 font-bold">{profile.experienceYears > 0 ? `${profile.experienceYears} Years` : "Student"}</span></span>
+                        <span>•</span>
+                        <span>Status: <span className="text-cyan-400 font-bold capitalize">{app.status.replace('_', ' ')}</span></span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setOpenAppId(app.id);
+                        setInterviewNotesText(app.notes || "Strong tech profile and prompt loop fundamentals.");
+                      }}
+                      className="px-4 py-2 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-xs font-bold text-cyan-400 hover:text-cyan-300 transition"
+                    >
+                      [Open]
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Admissions Offer Release Modal */}
+          {selectedAppForOffer && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-1">
+                    <Award className="w-4.5 h-4.5 text-cyan-400" />
+                    <span>Approve Bootcamp Admission</span>
+                  </h3>
+                  <button onClick={() => setSelectedAppForOffer(null)} className="text-slate-400 hover:text-white">
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleReleaseOfferSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Confirmation Allowances (Compensation / hr)</label>
+                    <input
+                      type="text"
+                      value={offerSalary}
+                      onChange={(e) => setOfferSalary(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Cohort Start Date</label>
+                    <input
+                      type="date"
+                      value={offerJoiningDate}
+                      onChange={(e) => setOfferJoiningDate(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Admissions Notes</label>
+                    <textarea
+                      value={customNotes}
+                      onChange={(e) => setCustomNotes(e.target.value)}
+                      rows={3}
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none resize-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isReleasingOffer}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-black tracking-wider transition uppercase"
+                  >
+                    {isReleasingOffer ? 'Approving and sending files...' : 'Confirm Admission Offer'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Schedule Interview Modal */}
+          {selectedAppForInterview && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-1">
+                    <Calendar className="w-4.5 h-4.5 text-cyan-400" />
+                    <span>Schedule Admissions Interview</span>
+                  </h3>
+                  <button onClick={() => setSelectedAppForInterview(null)} className="text-slate-400 hover:text-white">
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleScheduleInterviewSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-slate-400 mb-1">Pick Meeting slot</label>
+                    <input
+                      type="datetime-local"
+                      value={interviewTimeSlot}
+                      onChange={(e) => setInterviewTimeSlot(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black tracking-wider transition uppercase"
+                  >
+                    Schedule Interview Slot
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+        </div>
+      ) : (
+        /* AI Sourcing Slices panel */
+        <div className="space-y-6">
+          <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-md">
+            <h3 className="text-lg font-bold text-white mb-2">Query Sourcing Console</h3>
+            <p className="text-xs text-slate-400 leading-relaxed mb-4">
+              Enter queries in natural language to rank candidate profiles by custom test grades, project history, and experience.
+            </p>
+
+            <form onSubmit={handleAISearchSubmit} className="flex gap-2 mb-6">
+              <input
+                type="text"
+                value={nlQuery}
+                onChange={(e) => setNlQuery(e.target.value)}
+                className="flex-1 bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none font-mono"
+              />
+              <button
+                type="submit"
+                className="px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl text-xs transition"
+              >
+                Query DB
+              </button>
+            </form>
+
+            {isAiSearching && (
+              <div className="py-8 flex flex-col items-center justify-center space-y-3">
+                <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-mono text-indigo-400">Scanning index records...</span>
+              </div>
+            )}
+
+            {!isAiSearching && aiSearchResults.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-[10px] font-mono text-slate-500">Query resolved. Found {aiSearchResults.length} matching candidates:</p>
+                {aiSearchResults.map((cand, idx) => (
+                  <div key={idx} className="p-4 rounded-xl bg-slate-950 border border-slate-850 flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">{cand.fullName}</h4>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{cand.email} • Exp: {cand.experienceYears} yrs</p>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {cand.skills.map((s: string, sIdx: number) => (
+                          <span key={sIdx} className="text-[9px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-500">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <span className="text-xs font-black text-emerald-400 shrink-0">{cand.admissionScore}% Match</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {openAppId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-2xl shadow-2xl text-slate-100 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+              <div>
+                <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Application File Details</span>
+                <h3 className="text-base font-extrabold text-white mt-0.5">
+                  {candidateProfiles.find(p => p.userId === applications.find(a => a.id === openAppId)?.candidateId)?.fullName}
+                </h3>
+              </div>
+              <button
+                onClick={() => setOpenAppId(null)}
+                className="text-slate-400 hover:text-white transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs">
+              {/* Application Details */}
+              <div className="p-4 bg-slate-950 border border-slate-850 rounded-xl space-y-2">
+                <h4 className="font-extrabold text-white text-xs border-b border-slate-850 pb-1">Application</h4>
+                <div className="grid grid-cols-2 gap-2 text-slate-400">
+                  <div>Applied Course: <span className="text-white font-bold">{jobs.find(j => j.id === applications.find(a => a.id === openAppId)?.jobId)?.title}</span></div>
+                  <div>Applied Date: <span className="text-white font-bold">{new Date(applications.find(a => a.id === openAppId)?.appliedAt || '').toLocaleDateString()}</span></div>
                 </div>
               </div>
 
-              <form onSubmit={handleSearchSubmit} className="space-y-3">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={nlQuery}
-                    onChange={(e) => setNlQuery(e.target.value)}
-                    placeholder="e.g. Find candidates with 5+ years React and Node, based in Pune..."
-                    className="w-full bg-slate-800/90 border border-slate-700 rounded-xl pl-10 pr-32 py-3 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
-                  />
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                  <button
-                    type="submit"
-                    disabled={isAiSearching}
-                    className="absolute right-2 top-2 bottom-2 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow transition flex items-center space-x-1.5 disabled:opacity-50"
-                  >
-                    {isAiSearching ? (
-                      <>
-                        <Zap className="w-3.5 h-3.5 animate-spin" />
-                        <span>Searching...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>AI Search</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+              {/* Resume */}
+              <div className="p-4 bg-slate-950 border border-slate-850 rounded-xl space-y-2">
+                <h4 className="font-extrabold text-white text-xs border-b border-slate-850 pb-1">Resume</h4>
+                <p className="text-slate-400 font-mono text-[10px] leading-relaxed">
+                  {cvs.find(c => c.candidateId === applications.find(a => a.id === openAppId)?.candidateId)?.rawText || "No resume text content indexed."}
+                </p>
+              </div>
 
-                {/* Preset Chips */}
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-[11px] text-slate-500 font-medium">Try Preset Queries:</span>
-                  {presetQueries.map((pq, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setNlQuery(pq);
-                        runAISearch(pq, false);
-                      }}
-                      className="text-[11px] bg-slate-800 hover:bg-slate-700 text-indigo-300 px-2.5 py-1 rounded-lg border border-slate-700/80 transition"
-                    >
-                      "{pq.slice(0, 42)}..."
-                    </button>
-                  ))}
-                </div>
-              </form>
-            </div>
-
-            {/* Conversational Refinement Chat Panel */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col justify-between h-[250px]">
-              <div>
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800 mb-3">
-                  <span className="text-xs font-bold text-white">Refinement Chat Panel</span>
-                  <button
-                    onClick={() => {
-                      clearSearchChat();
-                      setNlQuery('');
-                    }}
-                    className="text-[10px] bg-slate-805 hover:bg-slate-800 text-rose-400 px-2.5 py-0.5 rounded border border-rose-950 transition font-bold"
-                  >
-                    Reset Chat
-                  </button>
-                </div>
-
-                <div className="space-y-2 overflow-y-auto max-h-[140px] pr-1 scrollbar-thin scrollbar-thumb-slate-800">
-                  {searchChatHistory.length === 0 ? (
-                    <p className="text-[11px] text-slate-500 text-center py-6">No refinements yet. Submit a search, then refine it below.</p>
+              {/* Links */}
+              <div className="p-4 bg-slate-950 border border-slate-850 rounded-xl space-y-2">
+                <h4 className="font-extrabold text-white text-xs border-b border-slate-850 pb-1">External Links & Portfolios</h4>
+                <div className="flex flex-wrap gap-4 text-cyan-400 font-bold">
+                  <span className="text-slate-500">Portfolio: </span>
+                  {candidateProfiles.find(p => p.userId === applications.find(a => a.id === openAppId)?.candidateId)?.portfolioUrl ? (
+                    <a href={candidateProfiles.find(p => p.userId === applications.find(a => a.id === openAppId)?.candidateId)?.portfolioUrl} target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
+                      <Globe className="w-3.5 h-3.5" />
+                      <span>Portfolio Link ✓</span>
+                    </a>
                   ) : (
-                    searchChatHistory.map((msg, idx) => (
-                      <div key={idx} className={`p-2 rounded-lg text-[11px] leading-snug ${
-                        msg.role === 'user' 
-                          ? 'bg-indigo-950/40 text-indigo-200 border border-indigo-500/10' 
-                          : 'bg-slate-800/80 text-slate-350 border border-slate-750'
-                      }`}>
-                        <span className="font-black block uppercase tracking-wider text-[9px] text-slate-500 mb-0.5">
-                          {msg.role === 'user' ? 'Recruiter Query' : 'AI Match Assist'}
-                        </span>
-                        {msg.content}
-                      </div>
-                    ))
+                    <span className="text-slate-600 font-normal">Not Provided</span>
+                  )}
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-500">GitHub: </span>
+                  {candidateProfiles.find(p => p.userId === applications.find(a => a.id === openAppId)?.candidateId)?.githubUrl ? (
+                    <a href={candidateProfiles.find(p => p.userId === applications.find(a => a.id === openAppId)?.candidateId)?.githubUrl} target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
+                      <Github className="w-3.5 h-3.5" />
+                      <span>GitHub Link ✓</span>
+                    </a>
+                  ) : (
+                    <span className="text-slate-600 font-normal">Not Provided</span>
+                  )}
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-500">LinkedIn: </span>
+                  {candidateProfiles.find(p => p.userId === applications.find(a => a.id === openAppId)?.candidateId)?.linkedinUrl ? (
+                    <a href={candidateProfiles.find(p => p.userId === applications.find(a => a.id === openAppId)?.candidateId)?.linkedinUrl} target="_blank" rel="noreferrer" className="hover:underline flex items-center gap-1">
+                      <Linkedin className="w-3.5 h-3.5" />
+                      <span>LinkedIn Link ✓</span>
+                    </a>
+                  ) : (
+                    <span className="text-slate-600 font-normal">Not Provided</span>
                   )}
                 </div>
               </div>
 
-              {/* Refinement input */}
-              <form onSubmit={handleRefineSubmit} className="pt-2 border-t border-slate-800 flex items-center space-x-2">
-                <input
-                  type="text"
-                  placeholder="Refine matches (e.g. 'only remote')..."
-                  value={refineQuery}
-                  onChange={(e) => setRefineQuery(e.target.value)}
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500"
-                />
-                <button
-                  type="submit"
-                  className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                </button>
-              </form>
-            </div>
-          </div>
-
-          {/* AI Search Criteria Extraction Badge */}
-          {aiSearchCriteria && (
-            <div className="p-4 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl flex flex-wrap items-center gap-4 text-xs text-indigo-200">
-              <div className="font-bold flex items-center space-x-1.5 text-indigo-300">
-                <Zap className="w-4 h-4 text-amber-400" />
-                <span>AI Parsed Criteria:</span>
-              </div>
-              {aiSearchCriteria.targetSkills && (
-                <div>Skills: <span className="font-semibold text-white">{aiSearchCriteria.targetSkills.join(', ')}</span></div>
-              )}
-              {aiSearchCriteria.minExperienceYears && (
-                <div>Min Exp: <span className="font-semibold text-white">{aiSearchCriteria.minExperienceYears} Yrs</span></div>
-              )}
-              {aiSearchCriteria.locationPreference && (
-                <div>Location: <span className="font-semibold text-white">{aiSearchCriteria.locationPreference}</span></div>
-              )}
-            </div>
-          )}
-
-          {/* Candidate Result Cards */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-200 flex items-center justify-between">
-              <span>Matching Candidate Profiles ({candidateProfiles.length})</span>
-              <span className="text-xs text-slate-400 font-normal">Hybrid DB + Vector Match</span>
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {candidateProfiles.map((candidate) => {
-                const aiResult = aiSearchResults ? aiSearchResults[candidate.userId] : null;
-                const candCvs = cvs.filter((c) => c.candidateId === candidate.userId);
-                const primaryCv = candCvs.find((c) => c.isPrimary) || candCvs[0];
-
-                const matchPct = aiResult ? aiResult.matchPercentage : candidate.userId === 'usr_cand_priya' ? 95 : candidate.userId === 'usr_cand_elena' ? 92 : 88;
-
-                return (
-                  <div
-                    key={candidate.id}
-                    className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5 shadow-lg space-y-4 transition flex flex-col justify-between"
-                  >
-                    <div className="space-y-3">
-                      {/* Header with Photo & Match % */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-3">
-                          <img
-                            src={candidate.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                            alt=""
-                            className="w-12 h-12 rounded-full object-cover ring-2 ring-indigo-500/40"
-                          />
-                          <div>
-                            <h4 className="text-base font-bold text-white">{candidate.fullName}</h4>
-                            <p className="text-xs text-slate-400">{candidate.location}</p>
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <div className={`text-base font-black px-2.5 py-0.5 rounded-lg border ${
-                            matchPct >= 90
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                              : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
-                          }`}>
-                            {matchPct}% Match
-                          </div>
-                          <span className="text-[10px] text-slate-500 font-medium block mt-0.5">AI Fit Score</span>
-                        </div>
-                      </div>
-
-                      {/* Reasoning Summary */}
-                      <p className="text-xs text-slate-300 bg-slate-800/60 p-2.5 rounded-xl border border-slate-700/60 leading-relaxed">
-                        {aiResult?.relevanceReasoning || `${candidate.experienceYears} years experience in ${candidate.skills.slice(0, 4).join(', ')}. Available ${candidate.availability}.`}
-                      </p>
-
-                      {/* Skills Tags */}
-                      <div className="flex flex-wrap gap-1.5">
-                        {candidate.skills.map((sk, idx) => {
-                          const isMatched = aiResult?.matchedSkills?.includes(sk) ?? true;
-                          return (
-                            <span
-                              key={idx}
-                              className={`text-[11px] px-2 py-0.5 rounded font-medium ${
-                                isMatched
-                                  ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
-                                  : 'bg-slate-800 text-slate-400'
-                              }`}
-                            >
-                              {sk}
-                            </span>
-                          );
-                        })}
-                      </div>
-
-                      <div className="text-[11px] text-slate-400 flex items-center justify-between">
-                        <span>Expected: <span className="font-bold text-slate-200">{candidate.expectedSalary}</span></span>
-                        <span>Availability: <span className="font-bold text-slate-200">{candidate.availability}</span></span>
-                      </div>
-                    </div>
-
-                    {/* Recruiter Card Actions */}
-                    <div className="pt-3 border-t border-slate-800/80 flex flex-col space-y-2">
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
-                        <span>Recruiter Actions:</span>
-                        <button
-                          onClick={() => {
-                            const cvText = primaryCv?.rawText || `${candidate.fullName} Resume\nSkills: ${candidate.skills.join(', ')}\nBio: ${candidate.bio}`;
-                            const blob = new Blob([cvText], { type: 'text/plain' });
-                            const url = URL.createObjectURL(blob);
-                            const link = document.createElement('a');
-                            link.href = url;
-                            link.download = `${candidate.fullName.replace(/\s+/g, '_')}_CV.txt`;
-                            link.click();
-                            URL.revokeObjectURL(url);
-                          }}
-                          className="text-indigo-400 hover:text-indigo-300 font-semibold flex items-center space-x-1"
-                        >
-                        <FileText className="w-3.5 h-3.5" />
-                          <span>Download CV</span>
-                        </button>
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                        {/* Reject button */}
-                        <button
-                          onClick={() => {
-                            let app = applications.find((a) => a.candidateId === candidate.userId);
-                            if (!app) {
-                              const job = jobs[0];
-                              if (!job) {
-                                alert('Please post a job in the portal before managing candidates.');
-                                return;
-                              }
-                              app = associateCandidateWithJob(candidate.userId, job.id);
-                            }
-                            updateApplicationStage(app.id, app.stage, 'rejected', 'Candidate rejected by recruiter during profile search review.');
-                            alert(`Candidate ${candidate.fullName} application marked as rejected.`);
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg bg-rose-950/50 hover:bg-rose-900/60 text-rose-350 text-[11px] font-semibold border border-rose-800/40 transition"
-                        >
-                          Reject
-                        </button>
-
-                        {/* Shortlist/Schedule Call */}
-                        <button
-                          onClick={() => {
-                            let app = applications.find((a) => a.candidateId === candidate.userId);
-                            if (!app) {
-                              const job = jobs[0];
-                              if (!job) {
-                                alert('Please post a job in the portal before managing candidates.');
-                                return;
-                              }
-                              app = associateCandidateWithJob(candidate.userId, job.id);
-                            }
-                            scheduleScreeningCall(app.id, 'Tomorrow at 2:00 PM PST');
-                            alert(`Candidate ${candidate.fullName} associated with "${jobs.find(j=>j.id===app?.jobId)?.title}" and screening call scheduled!`);
-                            setActiveTab('pipeline');
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold transition flex items-center space-x-1"
-                        >
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>Schedule Call</span>
-                        </button>
-
-                        {/* Trigger AI Interview */}
-                        <button
-                          onClick={async () => {
-                            let app = applications.find((a) => a.candidateId === candidate.userId);
-                            if (!app) {
-                              const job = jobs[0];
-                              if (!job) {
-                                alert('Please post a job in the portal before managing candidates.');
-                                return;
-                              }
-                              app = associateCandidateWithJob(candidate.userId, job.id);
-                            }
-                            await startAIInterview(app.id);
-                            alert(`Candidate ${candidate.fullName} associated with "${jobs.find(j=>j.id===app?.jobId)?.title}" and AI Interview generated!`);
-                            setActiveTab('pipeline');
-                          }}
-                          className="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold transition flex items-center space-x-1"
-                        >
-                          <Play className="w-3.5 h-3.5" />
-                          <span>AI Interview</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: POST-SHORTLIST AUTOMATION PIPELINE */}
-      {activeTab === 'pipeline' && (
-        <div className="space-y-6">
-          <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-base font-bold text-white">Automated Hiring Pipeline Manager</h2>
-              <p className="text-xs text-slate-400">
-                Track candidates post-shortlist: Stage 1 (Screening) → Stage 2 (Interview) → Stage 3 (Decision) → Stage 4 (Offer Letter)
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={startEditingTemplate}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition border border-slate-700 shrink-0"
-            >
-              Configure AI Offer Template
-            </button>
-          </div>
-
-          {/* Offer Template Customizer Form */}
-          {isEditingTemplate && (
-            <form onSubmit={handleSaveTemplate} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-850">
-                <h3 className="text-xs font-black uppercase text-indigo-400">AI Offer Letter Template Settings</h3>
-                <button
-                  type="button"
-                  onClick={() => setIsEditingTemplate(false)}
-                  className="text-xs text-slate-450 hover:text-slate-200"
-                >
-                  Close
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">Standard Benefits Package (Comma-separated)</label>
-                <input
-                  type="text"
-                  value={templateBenefits}
-                  onChange={(e) => setTemplateBenefits(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg px-3 py-2 text-xs text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">AI Offer Letter Template Body Text</label>
-                <textarea
-                  rows={6}
-                  value={templateBody}
-                  onChange={(e) => setTemplateBody(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 focus:border-indigo-500 focus:outline-none rounded-lg p-3 text-xs text-white font-mono leading-relaxed"
-                  placeholder="Use tags like {{candidate_name}}, {{role}}, {{salary}}, {{joining_date}}..."
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditingTemplate(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-350 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-indigo-605 hover:bg-indigo-550 text-white text-xs font-bold shadow"
-                >
-                  Save Settings
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Kanban board view */}
-          {(() => {
-            const stage1Apps = applications.filter((a) => a.stage === 1 && a.status !== 'rejected');
-            const stage2Apps = applications.filter((a) => a.stage === 2 && a.status !== 'rejected');
-            const stage3Apps = applications.filter((a) => a.stage === 3 && a.status !== 'rejected');
-            const stage4Apps = applications.filter((a) => a.stage === 4 && a.status !== 'rejected');
-
-            const renderKanbanCard = (app: Application) => {
-              const job = jobs.find((j) => j.id === app.jobId);
-              const candidate = candidateProfiles.find((p) => p.userId === app.candidateId);
-              const interview = interviews.find((i) => i.applicationId === app.id);
-              const offer = offerLetters.find((o) => o.applicationId === app.id);
-              const initials = candidate ? candidate.fullName.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase() : '??';
-
-              return (
-                <div key={app.id} className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-xl p-4 space-y-3 shadow transition">
-                  <div className="flex items-start justify-between gap-1">
-                    <div className="flex items-center space-x-2 min-w-0">
-                      {candidate?.avatar ? (
-                        <img src={candidate.avatar} alt="" className="w-8 h-8 rounded-full object-cover border border-slate-800" />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-indigo-605 flex items-center justify-center text-[10px] font-bold text-white border border-indigo-500 shrink-0">
-                          {initials}
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-white truncate">{candidate?.fullName}</h4>
-                        <p className="text-[10px] text-slate-400 truncate">{job?.title}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        updateApplicationStage(app.id, app.stage, 'rejected', 'Rejected by recruiter.');
-                        alert(`Candidate ${candidate?.fullName} marked as rejected.`);
-                      }}
-                      className="text-slate-500 hover:text-rose-450 transition"
-                      title="Reject Candidate"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 text-[11px] text-slate-300">
-                    {app.stage === 1 && (
-                      <div className="bg-slate-800/40 p-2 rounded border border-slate-800/80 space-y-1">
-                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Screening Slot:</div>
-                        <div className="font-semibold text-slate-200">{app.screeningSlot || 'Pending candidate booking...'}</div>
-                      </div>
-                    )}
-
-                    {app.stage === 2 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-[10px] text-slate-500 border-b border-slate-800 pb-1">
-                          <span className="font-bold uppercase tracking-wider">Interview Mode:</span>
-                          <span className="font-bold uppercase text-indigo-300">{interviewTypes[app.id] || 'ai'}</span>
-                        </div>
-                        {(interviewTypes[app.id] || 'ai') === 'human' ? (
-                          <div className="space-y-2">
-                            <div className="bg-slate-800/40 p-2 rounded border border-slate-800 flex items-center justify-between text-[10px]">
-                              <span className="font-mono text-slate-400 truncate mr-1.5">meet.google.com/qpx-ntvs-yhb</span>
-                              <a href="https://meet.google.com/qpx-ntvs-yhb" target="_blank" rel="noreferrer" className="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded font-bold hover:bg-blue-500 shrink-0 transition">
-                                Join
-                              </a>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setGradingApp(app);
-                                setTechScore(85);
-                                setCommScore(80);
-                                setRelScore(85);
-                                setInterviewSummary('');
-                              }}
-                              className="w-full py-1.5 rounded bg-indigo-605 hover:bg-indigo-500 text-white font-bold text-[10px] transition shadow"
-                            >
-                              Grade Interview
-                            </button>
-                          </div>
-                        ) : interview?.status === 'completed' ? (
-                          <div className="space-y-1.5 bg-slate-800/40 p-2 rounded border border-slate-800">
-                            <div className="flex justify-between font-bold text-emerald-400 text-[10px]">
-                              <span>Overall: {interview.overallScore}%</span>
-                              <span className="text-slate-500">AI Graded</span>
-                            </div>
-                            <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed">{interview.summary}</p>
-                          </div>
-                        ) : (
-                          <div className="text-[10px] text-slate-450 italic">AI Interview pending candidate completion...</div>
-                        )}
-                      </div>
-                    )}
-
-                    {app.stage === 3 && (
-                      <div className="bg-slate-800/40 p-2 rounded border border-slate-800/80 space-y-1">
-                        <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Assessment Status:</div>
-                        {interview ? (
-                          <div className="space-y-1 text-[10px]">
-                            <div className="font-bold text-emerald-400">Score: {interview.overallScore}%</div>
-                            <div className="text-slate-400 line-clamp-2">Feedback: {interview.summary}</div>
-                          </div>
-                        ) : (
-                          <div className="text-slate-400 italic">No score record found.</div>
-                        )}
-                      </div>
-                    )}
-
-                    {app.stage === 4 && (
-                      <div className="bg-slate-800/40 p-2 rounded border border-slate-800/80 space-y-1 text-[10px]">
-                        <div className="text-slate-500 font-bold uppercase tracking-wider">Offer Summary:</div>
-                        <div className="font-bold text-purple-300 capitalize">{offer?.status || 'Sent'}</div>
-                        {offer && <div className="text-slate-400 font-medium">Salary: {offer.salary}</div>}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-end border-t border-slate-800/80 pt-2 text-[10px]">
-                    {app.stage === 1 && app.screeningSlot && (
-                      <button
-                        onClick={() => updateApplicationStage(app.id, 2, 'interviewing', 'Screening call complete, starting assessment stage.')}
-                        className="text-emerald-400 hover:text-emerald-300 font-bold transition flex items-center space-x-1"
-                      >
-                        <span>Start Assessment</span>
-                        <Play className="w-3 h-3" />
-                      </button>
-                    )}
-                    {app.stage === 1 && !app.screeningSlot && (
-                      <span className="text-slate-500 italic">Waiting for booking</span>
-                    )}
-
-                    {app.stage === 2 && (
-                      <div className="flex items-center space-x-1 w-full justify-between">
-                        <span className="text-slate-500">Mode:</span>
-                        <select
-                          value={interviewTypes[app.id] || 'ai'}
-                          onChange={(e) => setInterviewTypes((prev) => ({ ...prev, [app.id]: e.target.value as 'ai' | 'human' }))}
-                          className="bg-slate-800 border border-slate-700 rounded px-1 text-[10px] text-slate-300"
-                        >
-                          <option value="ai">AI Agent</option>
-                          <option value="human">Human Meet</option>
-                        </select>
-                      </div>
-                    )}
-
-                    {app.stage === 3 && (
-                      <div className="flex items-center justify-between w-full">
-                        <button
-                          onClick={() => {
-                            updateApplicationStage(app.id, app.stage, 'rejected', 'Rejected by recruiter at decision stage.');
-                            alert(`Rejected candidate ${candidate?.fullName}`);
-                          }}
-                          className="text-rose-450 hover:text-rose-350 font-bold"
-                        >
-                          Reject
-                        </button>
-                        <button
-                          onClick={() => {
-                            updateApplicationStage(app.id, 4, 'selected', 'Approved for hire. Transitioning to offer release stage.');
-                            alert(`Promoted candidate ${candidate?.fullName} to offer letter release stage!`);
-                          }}
-                          className="text-emerald-405 hover:text-emerald-350 font-bold"
-                        >
-                          Approve Hire
-                        </button>
-                      </div>
-                    )}
-
-                    {app.stage === 4 && !offer && (
-                      <button
-                        onClick={() => setOfferApp(app)}
-                        className="bg-purple-650 hover:bg-purple-600 text-white font-bold px-2 py-1 rounded w-full text-center transition"
-                      >
-                        Release Offer Letter
-                      </button>
-                    )}
-                    {app.stage === 4 && offer && (
-                      <span className="text-purple-300 font-bold capitalize">Offer Status: {offer.status}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            };
-
-            return (
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-                {/* Column 1: Screening */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-xs font-black uppercase text-indigo-400 tracking-wider">1. Screening Call</span>
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 text-[10px] font-bold">{stage1Apps.length}</span>
-                  </div>
-                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-                    {stage1Apps.map((app) => renderKanbanCard(app))}
-                    {stage1Apps.length === 0 && (
-                      <div className="text-center py-8 text-slate-500 text-xs italic">No candidates in screening.</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Column 2: Assessment */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-xs font-black uppercase text-emerald-400 tracking-wider">2. Assessment</span>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 text-[10px] font-bold">{stage2Apps.length}</span>
-                  </div>
-                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-                    {stage2Apps.map((app) => renderKanbanCard(app))}
-                    {stage2Apps.length === 0 && (
-                      <div className="text-center py-8 text-slate-500 text-xs italic">No candidates in assessment.</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Column 3: Decision */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-xs font-black uppercase text-amber-400 tracking-wider">3. Verdict</span>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 text-[10px] font-bold">{stage3Apps.length}</span>
-                  </div>
-                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-                    {stage3Apps.map((app) => renderKanbanCard(app))}
-                    {stage3Apps.length === 0 && (
-                      <div className="text-center py-8 text-slate-500 text-xs italic">No candidates awaiting verdict.</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Column 4: Offer */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="text-xs font-black uppercase text-purple-400 tracking-wider">4. Offer Released</span>
-                    <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 text-[10px] font-bold">{stage4Apps.length}</span>
-                  </div>
-                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
-                    {stage4Apps.map((app) => renderKanbanCard(app))}
-                    {stage4Apps.length === 0 && (
-                      <div className="text-center py-8 text-slate-500 text-xs italic">No active offer releases.</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
-      {/* TAB 3: POSTED JOBS */}
-      {activeTab === 'jobs' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between bg-slate-800/50 border border-slate-700/60 rounded-2xl p-4">
-            <div>
-              <h2 className="text-base font-bold text-white">Company Job Postings</h2>
-              <p className="text-xs text-slate-400">Manage active postings and review candidate pipelines.</p>
-            </div>
-            <button
-              onClick={() => setShowCreateJobModal(true)}
-              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow"
-            >
-              + Create Job
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {jobs.map((job) => (
-              <div key={job.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 shadow-lg">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                      {job.domain}
-                    </span>
-                    <h3 className="text-base font-bold text-white mt-1">{job.title}</h3>
-                    <p className="text-xs text-slate-400">{job.location} • {job.type}</p>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
-                    {job.salaryRange}
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-300 line-clamp-2">{job.description}</p>
-
-                <div className="pt-2 border-t border-slate-800 text-xs text-slate-400 flex items-center justify-between">
-                  <span>Applicants: <span className="font-bold text-white">{applications.filter((a) => a.jobId === job.id).length}</span></span>
-                  <span className="text-emerald-400 font-semibold capitalize">Status: {job.status}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* CREATE JOB MODAL */}
-      {showCreateJobModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-4 text-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-base font-bold text-white">Post New Job</h3>
-              <button onClick={() => setShowCreateJobModal(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateJobSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Job Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Senior Full-Stack Lead"
-                  value={newJobTitle}
-                  onChange={(e) => setNewJobTitle(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              {/* Assessment */}
+              <div className="p-4 bg-slate-950 border border-slate-850 rounded-xl space-y-2">
+                <h4 className="font-extrabold text-white text-xs border-b border-slate-850 pb-1">Assessment Score</h4>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Domain</label>
-                  <select
-                    value={newJobDomain}
-                    onChange={(e) => setNewJobDomain(e.target.value as any)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200"
-                  >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Data & AI">Data & AI</option>
-                    <option value="DevOps">DevOps</option>
-                    <option value="Product">Product</option>
-                    <option value="Design">Design</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Salary Range</label>
-                  <input
-                    type="text"
-                    value={newJobSalary}
-                    onChange={(e) => setNewJobSalary(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200"
-                  />
+                  Score Rank: <span className="font-extrabold text-cyan-400">{candidateProfiles.find(p => p.userId === applications.find(a => a.id === openAppId)?.candidateId)?.admissionScore || "Pending"}%</span>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Location</label>
-                <input
-                  type="text"
-                  value={newJobLocation}
-                  onChange={(e) => setNewJobLocation(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Requirements (Comma Separated)</label>
-                <input
-                  type="text"
-                  value={newJobReqs}
-                  onChange={(e) => setNewJobReqs(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200"
-                />
-              </div>
-
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateJobModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md"
-                >
-                  Publish Job Posting
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* RELEASE OFFER MODAL */}
-      {offerApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 text-slate-100">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-base font-bold text-white">Release Offer Letter</h3>
-              <button onClick={() => setOfferApp(null)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleReleaseOfferSubmit} className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Offered Salary</label>
-                <input
-                  type="text"
-                  required
-                  value={offerSalary}
-                  onChange={(e) => setOfferSalary(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Target Joining Date</label>
-                <input
-                  type="date"
-                  required
-                  value={offerJoiningDate}
-                  onChange={(e) => setOfferJoiningDate(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div className="p-3 bg-purple-950/40 border border-purple-500/30 rounded-xl text-xs text-purple-200">
-                Server Gemini AI auto-fills template placeholders ({'{{candidate_name}}'}, {'{{role}}'}, {'{{salary}}'}) and releases offer to candidate portal.
-              </div>
-
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setOfferApp(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isGeneratingOffer}
-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md disabled:opacity-50"
-                >
-                  {isGeneratingOffer ? 'AI Generating...' : 'Release Offer Letter'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      {gradingApp && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4 text-slate-100 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-base font-bold text-white">Grade Human Interview</h3>
-              <button onClick={() => setGradingApp(null)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-350 mb-1">
-                  Technical Score: {techScore}%
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={techScore}
-                  onChange={(e) => setTechScore(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-350 mb-1">
-                  Communication Score: {commScore}%
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={commScore}
-                  onChange={(e) => setCommScore(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-350 mb-1">
-                  Relevance & Alignment: {relScore}%
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={relScore}
-                  onChange={(e) => setRelScore(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-350 mb-1">
-                  Interview Evaluation Notes
-                </label>
+              {/* Interview Notes */}
+              <div className="p-4 bg-slate-950 border border-slate-850 rounded-xl space-y-2">
+                <h4 className="font-extrabold text-white text-xs border-b border-slate-850 pb-1">Interview Notes</h4>
                 <textarea
-                  rows={4}
-                  required
-                  placeholder="Provide brief feedback summary from the human call..."
-                  value={interviewSummary}
-                  onChange={(e) => setInterviewSummary(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                  value={interviewNotesText}
+                  onChange={(e) => setInterviewNotesText(e.target.value)}
+                  rows={2}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500"
                 />
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setGradingApp(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-800 text-slate-350 text-xs font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const overall = Math.round((techScore + commScore + relScore) / 3);
-                    addManualInterviewEvaluation(gradingApp.id, {
-                      overallScore: overall,
-                      technicalScore: techScore,
-                      communicationScore: commScore,
-                      relevanceScore: relScore,
-                      summary: interviewSummary || `Completed human interview. Technical Alignment: ${techScore}%, Comm: ${commScore}%.`
-                    });
-                    setGradingApp(null);
-                    alert('Interview graded successfully! Candidate promoted to Verdict Stage.');
-                  }}
-                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow"
-                >
-                  Submit Scorecard
-                </button>
+              {/* Overall Fit */}
+              <div className="p-4 bg-slate-950 border border-slate-850 rounded-xl space-y-2">
+                <h4 className="font-extrabold text-white text-xs border-b border-slate-850 pb-1">Overall Fit</h4>
+                <input
+                  type="text"
+                  value={overallFitText}
+                  onChange={(e) => setOverallFitText(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+                />
               </div>
+            </div>
+
+            {/* Action buttons footer */}
+            <div className="pt-4 border-t border-slate-800 mt-4 flex flex-wrap gap-2 justify-end">
+              {applications.find(a => a.id === openAppId)?.status === 'applied' ? (
+                <>
+                  <button
+                    onClick={() => {
+                      handleApproveRegistration(openAppId || '');
+                      setOpenAppId(null);
+                    }}
+                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 rounded-lg text-xs font-black text-white shadow"
+                  >
+                    Approve Application Request
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleRejectApplication(openAppId || '');
+                      setOpenAppId(null);
+                    }}
+                    className="px-4 py-2 bg-slate-900 hover:bg-red-950/40 rounded-lg text-xs font-bold text-red-400 border border-slate-800 hover:border-red-950"
+                  >
+                    Reject Request
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setSelectedAppForOffer(applications.find(a => a.id === openAppId) || null);
+                      setOpenAppId(null);
+                    }}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-black text-white shadow"
+                  >
+                    Approve File
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedAppForInterview(applications.find(a => a.id === openAppId) || null);
+                      setOpenAppId(null);
+                    }}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-300"
+                  >
+                    Schedule Interview
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleRequestMoreInfo(openAppId || '');
+                      setOpenAppId(null);
+                    }}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black rounded-lg text-xs"
+                  >
+                    Need Info
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleRejectApplication(openAppId || '');
+                      setOpenAppId(null);
+                    }}
+                    className="px-4 py-2 bg-slate-900 hover:bg-red-950/40 rounded-lg text-xs font-bold text-red-400 border border-slate-800 hover:border-red-950"
+                  >
+                    Reject
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 };

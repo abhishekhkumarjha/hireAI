@@ -1,373 +1,148 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Briefcase, CheckCircle2, Key, Lock, LogIn, Mail, Shield, User, UserPlus, Info } from 'lucide-react';
 import { usePortal } from '../context/PortalContext';
-import { Sparkles, Shield, User, Briefcase, Mail, Lock, LogIn, ArrowRight, UserPlus, Key, Info, CheckCircle2 } from 'lucide-react';
 
-export const AuthView: React.FC = () => {
+type AuthMode = 'login' | 'candidate_signup' | 'invite';
+
+interface AuthViewProps {
+  onBackToLanding?: () => void;
+  onAuthenticated?: () => void;
+}
+
+export const AuthView: React.FC<AuthViewProps> = ({ onBackToLanding, onAuthenticated }) => {
   const { users, invites, loginUser, signupCandidate, signupViaInvite } = usePortal();
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'invite'>('login');
-  
-  // Input fields
+  const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [password, setPassword] = useState(''); // starts empty for security
+  const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
-  const [provider, setProvider] = useState<'google' | 'github' | 'facebook' | 'email'>('google');
-  
+  const [provider, setProvider] = useState<'google' | 'github' | 'facebook' | 'email'>('email');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Check URL parameters for invites
+  const inputClass = 'w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white placeholder:text-slate-600 outline-none transition focus:border-indigo-500';
+
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+  };
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get('token');
-    if (tokenParam) {
-      setToken(tokenParam);
-      setAuthMode('invite');
-      
-      // Auto-look up invite email
-      const matched = invites.find(inv => inv.token === tokenParam);
-      if (matched) {
-        setEmail(matched.email);
-        setSuccessMsg(`Valid invite token detected for: ${matched.email} (${matched.role})`);
-      } else {
-        setErrorMsg('Expiring invite token not found or already consumed.');
-      }
+    const tokenFromUrl = new URLSearchParams(window.location.search).get('token');
+    if (!tokenFromUrl) return;
+
+    setToken(tokenFromUrl);
+    setMode('invite');
+    const invite = invites.find((item) => item.token === tokenFromUrl);
+    if (invite) {
+      setEmail(invite.email);
+      setName(invite.invitedByName || '');
+      setSuccessMsg(`Invite verified for ${invite.role}. Complete your account activation.`);
+    } else {
+      setErrorMsg('This invite token is invalid, expired, or has already been used.');
     }
   }, [invites]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = (event: React.FormEvent) => {
+    event.preventDefault();
     setErrorMsg(null);
-    if (!email || !password) return;
-    const success = loginUser(email, password);
-    if (!success) {
-      setErrorMsg('Invalid email address or incorrect password. Please try again.');
+    if (!loginUser(email, password)) {
+      setErrorMsg('Invalid email or password. Please try again.');
+      return;
     }
+    onAuthenticated?.();
   };
 
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCandidateSignup = (event: React.FormEvent) => {
+    event.preventDefault();
     setErrorMsg(null);
-    if (!email || !name || !password) {
-      setErrorMsg('All fields including password are required.');
+    if (!name || !email || !password) {
+      setErrorMsg('Please complete every field.');
       return;
     }
-    
-    // Check if email already in use
-    const exists = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    if (exists) {
-      setErrorMsg('This email address is already registered. Try logging in.');
+    if (users.some((user) => user.email.toLowerCase() === email.toLowerCase())) {
+      setErrorMsg('This email is already registered. Please sign in instead.');
       return;
     }
-
     signupCandidate(name, email, password, provider);
-    setSuccessMsg('Successfully signed up as candidate!');
+    onAuthenticated?.();
   };
 
-  const handleInviteSignup = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInviteSignup = (event: React.FormEvent) => {
+    event.preventDefault();
     setErrorMsg(null);
     if (!name || !token || !password) {
-      setErrorMsg('Please fill in your name and set a secure password.');
+      setErrorMsg('Please complete every required field.');
       return;
     }
-
     const user = signupViaInvite(name, email, password, token, provider);
-    if (user) {
-      setSuccessMsg(`Welcome aboard! Account activated as: ${user.role}`);
-      // Clean up URL query param to clean the browser location bar
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else {
-      setErrorMsg('Invalid or expired invite token. Please contact your Super Admin.');
+    if (!user) {
+      setErrorMsg('This invite token is invalid, expired, or has already been used.');
+      return;
     }
+    window.history.replaceState({}, document.title, window.location.pathname);
+    onAuthenticated?.();
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans text-slate-100 selection:bg-indigo-500 selection:text-white">
-      {/* Decorative Blur Background circles */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-12 font-sans text-slate-100">
+      <div className="pointer-events-none absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-indigo-600/10 blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-purple-600/10 blur-[120px]" />
 
-      {/* Brand Header */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10 space-y-2">
-        <div className="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 items-center justify-center shadow-lg shadow-indigo-500/20 mx-auto">
-          <Briefcase className="w-6 h-6 text-white" />
+      {onBackToLanding && (
+        <button onClick={onBackToLanding} className="absolute left-6 top-6 text-xs font-semibold text-slate-400 transition hover:text-white">
+          Back to landing
+        </button>
+      )}
+
+      <div className="z-10 w-full max-w-md">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-500 shadow-lg shadow-indigo-500/25">
+            <Briefcase className="h-6 w-6 text-white" />
+          </div>
+          <h1 className="text-3xl font-black tracking-tight text-white">HirePortal</h1>
+          <p className="mt-1 text-sm text-slate-400">Talent acquisition and hiring portal</p>
         </div>
-        <h2 className="text-3xl font-black text-white tracking-tight">HirePortal</h2>
-        <p className="text-sm text-slate-400">Talent Acquisition & Hiring Portal</p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
-        <div className="bg-slate-900 border border-slate-800/80 shadow-2xl rounded-3xl p-6 sm:p-8 space-y-6 backdrop-blur-md">
-          {/* View Tab Switcher */}
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-            <button
-              onClick={() => { setAuthMode('login'); setErrorMsg(null); setSuccessMsg(null); }}
-              className={`flex-1 py-2 rounded-lg font-semibold transition text-center ${
-                authMode === 'login' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => { setAuthMode('signup'); setErrorMsg(null); setSuccessMsg(null); }}
-              className={`flex-1 py-2 rounded-lg font-semibold transition text-center ${
-                authMode === 'signup' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Candidate Join
-            </button>
-            <button
-              onClick={() => { setAuthMode('invite'); setErrorMsg(null); setSuccessMsg(null); }}
-              className={`flex-1 py-2 rounded-lg font-semibold transition text-center ${
-                authMode === 'invite' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Use Invite Link
-            </button>
+        <div className="space-y-6 rounded-3xl border border-slate-800/80 bg-slate-900 p-6 shadow-2xl backdrop-blur-md sm:p-8">
+          <div className="flex rounded-xl border border-slate-800 bg-slate-950 p-1 text-xs">
+            <button onClick={() => switchMode('login')} className={`flex-1 rounded-lg py-2 font-semibold transition ${mode === 'login' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}>Sign In</button>
+            <button onClick={() => switchMode('candidate_signup')} className={`flex-1 rounded-lg py-2 font-semibold transition ${mode === 'candidate_signup' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}>Candidate Sign Up</button>
+            <button onClick={() => switchMode('invite')} className={`flex-1 rounded-lg py-2 font-semibold transition ${mode === 'invite' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}>Recruiter / Admin</button>
           </div>
 
-          {errorMsg && (
-            <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-xl flex items-start space-x-2">
-              <Info className="w-4 h-4 mt-0.5 shrink-0 text-rose-400" />
-              <span>{errorMsg}</span>
-            </div>
-          )}
+          {errorMsg && <div className="flex gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300"><Info className="h-4 w-4 shrink-0" />{errorMsg}</div>}
+          {successMsg && <div className="flex gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300"><CheckCircle2 className="h-4 w-4 shrink-0" />{successMsg}</div>}
 
-          {successMsg && (
-            <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs rounded-xl flex items-start space-x-2">
-              <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-emerald-400" />
-              <span>{successMsg}</span>
-            </div>
-          )}
-
-          {/* 1. LOGIN FORM */}
-          {authMode === 'login' && (
+          {mode === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1">
-                  <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Email Address</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. alex.vance@hireai.dev"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1">
-                  <Lock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Password</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 transition flex items-center justify-center space-x-2"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Access Portal Account</span>
-              </button>
+              <p className="text-center text-xs text-slate-400">Use your account credentials. Your portal opens automatically based on your access role.</p>
+              <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />Email address</span><input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} /></label>
+              <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" />Password</span><input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} className={inputClass} /></label>
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/25 transition hover:bg-indigo-500"><LogIn className="h-4 w-4" />Sign In</button>
             </form>
           )}
 
-          {/* 2. CANDIDATE SIGNUP FORM */}
-          {authMode === 'signup' && (
-            <form onSubmit={handleSignup} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Full Name</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Liam Anderson"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1">
-                  <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Email Address</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. liam.a@devmail.io"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1">
-                  <Lock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Set Password</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter a secure password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Select OAuth provider</label>
-                  <select
-                    value={provider}
-                    onChange={(e) => setProvider(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
-                  >
-                    <option value="google">Google Login</option>
-                    <option value="github">GitHub OAuth</option>
-                    <option value="facebook">Facebook Connect</option>
-                    <option value="email">Direct Email</option>
-                  </select>
-                </div>
-                <div className="flex flex-col justify-end">
-                  <div className="text-[10px] text-slate-500 leading-tight">
-                    Simulates credential tokens for the Admin audit trail.
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 transition flex items-center justify-center space-x-2"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Register & Open Candidate Profile</span>
-              </button>
+          {mode === 'candidate_signup' && (
+            <form onSubmit={handleCandidateSignup} className="space-y-4">
+              <p className="text-xs text-slate-400">Create a candidate account to apply for jobs and manage your profile.</p>
+              <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 flex items-center gap-1.5"><User className="h-3.5 w-3.5" />Full name</span><input required value={name} onChange={(event) => setName(event.target.value)} className={inputClass} /></label>
+              <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />Email address</span><input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} /></label>
+              <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" />Password</span><input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} className={inputClass} /></label>
+              <select value={provider} onChange={(event) => setProvider(event.target.value as typeof provider)} className={inputClass}><option value="email">Email</option><option value="google">Google</option><option value="github">GitHub</option><option value="facebook">Facebook</option></select>
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/25 transition hover:bg-indigo-500"><UserPlus className="h-4 w-4" />Create Candidate Account</button>
             </form>
           )}
 
-          {/* 3. INVITE TOKEN FORM */}
-          {authMode === 'invite' && (
+          {mode === 'invite' && (
             <form onSubmit={handleInviteSignup} className="space-y-4">
-              <div className="p-3 bg-indigo-950/40 border border-indigo-500/20 rounded-xl text-[11px] text-indigo-300">
-                <p>
-                  Privileged roles (Admin, Recruiter) are closed for self-registration. Input a signed token generated by your administrator to sign up.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1">
-                  <Key className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Invite Token / Token String</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. inv_token_recruiter_xxxx"
-                  value={token}
-                  onChange={(e) => {
-                    let val = e.target.value.trim();
-                    if (val.includes('?')) {
-                      try {
-                        const urlParams = new URLSearchParams(val.split('?')[1]);
-                        const tokenParam = urlParams.get('token');
-                        if (tokenParam) {
-                          val = tokenParam;
-                        }
-                      } catch (err) {
-                        console.error('Failed to parse token URL', err);
-                      }
-                    }
-                    setToken(val);
-                    const matched = invites.find(inv => inv.token === val);
-                    if (matched) {
-                      setEmail(matched.email);
-                      setErrorMsg(null);
-                    } else {
-                      setEmail('');
-                    }
-                  }}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Your Full Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Pre-verified Email Address</label>
-                <input
-                  type="email"
-                  readOnly
-                  placeholder="Will auto-fill on token match"
-                  value={email}
-                  className="w-full bg-slate-900 border border-slate-800 text-slate-400 rounded-xl px-3 py-2.5 text-xs focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center space-x-1">
-                  <Lock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Set Password</span>
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter a secure password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none rounded-xl px-3 py-2.5 text-xs text-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] text-slate-400 mb-1">Verify with provider</label>
-                  <select
-                    value={provider}
-                    onChange={(e) => setProvider(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
-                  >
-                    <option value="google">Google Consent</option>
-                    <option value="github">GitHub Consent</option>
-                    <option value="facebook">Facebook Consent</option>
-                    <option value="email">Email Link</option>
-                  </select>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 transition flex items-center justify-center space-x-2"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Verify Token & Activate Account</span>
-              </button>
+              <div className="flex gap-2 rounded-xl border border-indigo-500/20 bg-indigo-950/40 p-3 text-xs text-indigo-300"><Shield className="h-4 w-4 shrink-0" />Recruiter and Admin accounts are activated with an invite token issued by a Super Admin.</div>
+              <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 flex items-center gap-1.5"><Key className="h-3.5 w-3.5" />Invite token</span><input required value={token} onChange={(event) => { let value = event.target.value.trim(); if (value.includes('token=')) { const tokenMatch = value.match(/token=([^&]+)/); if (tokenMatch) value = tokenMatch[1]; } setToken(value); const invite = invites.find((item) => item.token === value); setEmail(invite?.email ?? ''); setName(invite?.invitedByName ?? ''); }} className={`${inputClass} font-mono`} /></label>
+              <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 flex items-center gap-1.5"><User className="h-3.5 w-3.5" />Full name</span><input required value={name} onChange={(event) => setName(event.target.value)} className={inputClass} /></label>
+              <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" />Verified email</span><input readOnly value={email} className={`${inputClass} cursor-not-allowed text-slate-400`} /></label>
+              <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" />Password</span><input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} className={inputClass} /></label>
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-600/25 transition hover:bg-indigo-500"><CheckCircle2 className="h-4 w-4" />Activate Account</button>
             </form>
           )}
         </div>
