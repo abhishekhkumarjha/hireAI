@@ -41,13 +41,13 @@ const MainLayout: React.FC = () => {
       else if (detail === 'auth') setPortalHost('auth');
       else setPortalHost('app');
     };
-    window.addEventListener('zeptrax-switch-portal', handleSwitch);
-    return () => window.removeEventListener('zeptrax-switch-portal', handleSwitch);
+    window.addEventListener('cloudinntech-switch-portal', handleSwitch);
+    return () => window.removeEventListener('cloudinntech-switch-portal', handleSwitch);
   }, []);
 
   // ── Landing Page CTA handler: always goes through auth gate first ──
   const handleEnterPortal = (mode?: 'apply' | 'free' | 'signin', targetId?: string) => {
-    if (targetId) localStorage.setItem('zeptrax_selected_job_id', targetId);
+    if (targetId) localStorage.setItem('cloudinntech_selected_job_id', targetId);
 
     // Map landing page mode to auth intent
     let intent: AuthIntent | null = null;

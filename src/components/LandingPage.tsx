@@ -92,7 +92,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
     }, 1500);
   };
 
-  // Masters Programs Data (All 30 Master's in AI Programs from Zeptrax AI Edutech)
+  // Masters Programs Data (All 30 Master's in AI Programs from CloudInnTech Edutech)
   const mastersPrograms = [
     { title: "01. Masters in AI with Project Management", cat: "Management", slug: "masters-in-ai-project-management" },
     { title: "02. Masters in AI with Business Intelligence", cat: "Data Science", slug: "masters-in-ai-business-intelligence" },
@@ -169,12 +169,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
       <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-              <Cpu className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden border border-indigo-400/30 bg-slate-950 shadow-lg shadow-indigo-500/20">
+              <img src="/cloudinntech-logo.png" alt="CloudInnTech" className="w-full h-full object-cover" />
             </div>
             <div>
-              <span className="font-extrabold text-xl text-white tracking-tight">Zeptrax AI</span>
-              <span className="block text-[9px] font-semibold text-slate-400 tracking-wider uppercase">by CloudInnTech</span>
+              <span className="font-extrabold text-xl text-white tracking-tight">CloudInnTech</span>
             </div>
           </div>
 
@@ -227,7 +226,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
         </h1>
 
         <p className="mt-6 text-base sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed font-medium">
-          Automate resume parsing, proctored anti-cheat screening, scheduling, and onboarding in one end-to-end platform engineered by **CloudInnTech**.
+          Automate resume parsing, proctored anti-cheat screening, scheduling, and onboarding in one end-to-end platform engineered by <strong className="font-bold text-white">CloudInnTech</strong>.
         </p>
 
         {/* Hero CTAs */}
@@ -260,7 +259,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
             <span className="text-sm font-black text-slate-300 tracking-wider">TCS GLOBAL</span>
             <span className="text-sm font-black text-slate-300 tracking-wider">INFOSYS</span>
             <span className="text-sm font-black text-slate-300 tracking-wider">CLOUDINNTECH</span>
-            <span className="text-sm font-black text-slate-300 tracking-wider">ZEPTRAX LABS</span>
+            <span className="text-sm font-black text-slate-300 tracking-wider">CLOUDINNTECH LABS</span>
           </div>
         </div>
       </section>
@@ -270,7 +269,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
         <div className="text-center max-w-3xl mx-auto mb-12">
           <h2 className="text-3xl font-extrabold text-white">Dual-Core Ecosystem Architecture</h2>
           <p className="text-sm text-slate-400 mt-2">
-            Zeptrax AI integrates industry-grade recruitment automation with curriculum-focused technical learning.
+            CloudInnTech integrates industry-grade recruitment automation with curriculum-focused technical learning.
           </p>
         </div>
 
@@ -286,7 +285,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
               }`}
             >
               <Briefcase className="w-3.5 h-3.5" />
-              <span>Zeptrax AI HIRE</span>
+              <span>CloudInnTech HIRE</span>
             </button>
             <button
               onClick={() => setActiveTab('learn')}
@@ -297,7 +296,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
-              <span>Zeptrax AI EDUTECH</span>
+              <span>CloudInnTech EDUTECH</span>
             </button>
           </div>
         </div>
@@ -418,7 +417,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
               Test Drive Our AI Talent Sourcing Simulator
             </h2>
             <p className="text-slate-400 text-sm mt-4 leading-relaxed">
-              Experience the power of natural language sourcing. Zeptrax AI processes complex recruiting queries, parses skills, and ranks matching candidates in a fraction of a second.
+              Experience the power of natural language sourcing. CloudInnTech processes complex recruiting queries, parses skills, and ranks matching candidates in a fraction of a second.
             </p>
 
             <div className="mt-6 space-y-3">
@@ -445,7 +444,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
                 <div className="w-3 h-3 rounded-full bg-red-500" />
                 <div className="w-3 h-3 rounded-full bg-yellow-500" />
                 <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span className="text-[10px] font-mono text-slate-500 ml-2">zeptrax-ai-query-engine.sh</span>
+                <span className="text-[10px] font-mono text-slate-500 ml-2">cloudinntech-query-engine.sh</span>
               </div>
               <span className="text-[10px] font-semibold text-indigo-400 uppercase tracking-widest">Active Sim</span>
             </div>
@@ -525,7 +524,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
               <BookOpen className="w-3.5 h-3.5" />
               <span>Program Catalog</span>
             </div>
-            <h2 className="text-3xl font-extrabold text-white">Zeptrax AI Edutech masters & Certifications</h2>
+            <h2 className="text-3xl font-extrabold text-white">CloudInnTech Edutech Masters & Certifications</h2>
             <p className="text-slate-400 text-sm mt-1">
               Select a specialized domain to see curriculum tracks designed with Indian corporate alignment.
             </p>
@@ -773,7 +772,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
             </div>
 
             <button
-              onClick={() => alert("Enterprise Sales Desk: Contact sales@cloudinntech.co.in / sales@zeptrax.ai")}
+              onClick={() => alert("Enterprise Sales Desk: Contact sales@cloudinntech.co.in")}
               className="mt-8 w-full py-3 bg-slate-950 border border-slate-800 hover:border-purple-500 text-white rounded-xl text-xs font-bold transition cursor-pointer"
             >
               Contact Sales
@@ -781,7 +780,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
           </div>
         </div>
 
-        {/* Pricing Table Cards (Matches Zeptrax AI Edutech Slide 4) */}
+        {/* Pricing Table Cards (Matches CloudInnTech Edutech Slide 4) */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto mb-16">
           <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center justify-between shadow-lg hover:border-indigo-500/40 transition">
             <div>
@@ -844,7 +843,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
           </div>
         </div>
 
-        {/* Common Program Features Grid (Matches Zeptrax AI Edutech Slide 2 & 3) */}
+        {/* Common Program Features Grid (Matches CloudInnTech Edutech Slide 2 & 3) */}
         <div className="p-8 rounded-3xl bg-slate-900/40 border border-slate-800 shadow-xl">
           <h3 className="text-xl font-bold text-white mb-6 text-center">Common Program Structure & Student Benefits</h3>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-xs">
@@ -894,7 +893,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
             </div>
             <h2 className="text-3xl font-extrabold text-white">Active Job Postings (Recruiter Sourced)</h2>
             <p className="text-slate-400 text-sm mt-1 font-medium">
-              Apply to active vacancies with Zeptrax and our network partners. Applications go directly to Course Recruiters.
+              Apply to active vacancies with CloudInnTech and our network partners. Applications go directly to Course Recruiters.
             </p>
           </div>
         </div>
@@ -982,7 +981,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
               Calculate Your Efficiency Gains
             </h2>
             <p className="text-slate-400 text-sm mt-4 leading-relaxed">
-              Recruiters waste hundreds of hours manually reviewing resumes and coordinating initial calls. Use our calculator to model the hours and costs Zeptrax AI helps reclaim.
+              Recruiters waste hundreds of hours manually reviewing resumes and coordinating initial calls. Use our calculator to model the hours and costs CloudInnTech helps reclaim.
             </p>
 
             <div className="mt-8 space-y-6">
@@ -1050,9 +1049,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
 
         <div className="space-y-4">
           <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800">
-            <h4 className="text-sm font-bold text-white mb-2">What is Zeptrax AI?</h4>
+            <h4 className="text-sm font-bold text-white mb-2">What is CloudInnTech?</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Zeptrax AI is a next-generation recruitment and upskilling ecosystem developed by CloudInnTech. It features an isolated applicant tracking system (ATS) for employers and candidates, combined with a comprehensive blockchain-verified Learning Management System (LMS) for professional training.
+              CloudInnTech is a next-generation recruitment and upskilling ecosystem. It features an isolated applicant tracking system (ATS) for employers and candidates, combined with a comprehensive blockchain-verified Learning Management System (LMS) for professional training.
             </p>
           </div>
 
@@ -1071,9 +1070,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
           </div>
 
           <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800">
-            <h4 className="text-sm font-bold text-white mb-2">How can we contact Zeptrax AI for partnership queries?</h4>
+            <h4 className="text-sm font-bold text-white mb-2">How can we contact CloudInnTech for partnership queries?</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
-              You can contact our admissions or corporate partnerships team at **info@zeptrax.ai** or chat with us on WhatsApp at **+91-8368544821**.
+              You can contact our admissions or corporate partnerships team at <strong className="font-bold text-white">info@cloudinntech.co.in</strong> or chat with us on WhatsApp at <strong className="font-bold text-white">+91-8368544821</strong>.
             </p>
           </div>
         </div>
@@ -1083,18 +1082,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
       <footer className="bg-slate-950 border-t border-slate-900 py-12 px-4 sm:px-6 lg:px-8 text-center text-slate-500">
         <div className="max-w-7xl mx-auto space-y-4">
           <div className="flex items-center justify-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <Cpu className="w-4.5 h-4.5 text-white" />
+            <div className="w-8 h-8 rounded-lg overflow-hidden border border-indigo-400/30 bg-slate-950 shadow-lg shadow-indigo-500/20">
+              <img src="/cloudinntech-logo.png" alt="CloudInnTech" className="w-full h-full object-cover" />
             </div>
-            <span className="font-bold text-white text-lg tracking-tight">Zeptrax AI</span>
+            <span className="font-bold text-white text-lg tracking-tight">CloudInnTech</span>
           </div>
           
           <p className="text-xs max-w-md mx-auto leading-relaxed">
-            Leading AI-first talent search engines, automated interviews, and credentialed LMS programs. Developed by **CloudInnTech Co. India**.
+            Leading AI-first talent search engines, automated interviews, and credentialed LMS programs. Developed by <strong className="font-bold text-white">CloudInnTech Co. India</strong>.
           </p>
 
           <p className="text-[10px] text-slate-600">
-            © {new Date().getFullYear()} CloudInnTech. All rights reserved. | Contact: info@zeptrax.ai | WhatsApp Support: +91-8368544821
+            © {new Date().getFullYear()} CloudInnTech. All rights reserved. | Contact: info@cloudinntech.co.in | WhatsApp Support: +91-8368544821
           </p>
         </div>
       </footer>

@@ -327,7 +327,7 @@ export const AdminView: React.FC = () => {
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-1.5">
                 <SlidersHorizontal className="w-4 h-4 text-cyan-400" />
-                <span>Zeptrax AI Edutech Masters Admissions Review</span>
+                <span>CloudInnTech Edutech Masters Admissions Review</span>
               </h3>
               <div className="text-right">
                 <span className="text-[10px] font-bold text-slate-500 uppercase block">Pending Review</span>

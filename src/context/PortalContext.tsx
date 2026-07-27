@@ -30,7 +30,7 @@ import {
   PERMISSION_MATRIX,
 } from '../data/initialData';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
 
 interface PortalContextType {
   currentUser: User | null;

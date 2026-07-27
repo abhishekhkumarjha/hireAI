@@ -84,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-bold text-lg text-white tracking-tight">Zeptrax AI</span>
+              <span className="font-bold text-lg text-white tracking-tight">CloudInnTech</span>
               <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                 Hire Portal
               </span>

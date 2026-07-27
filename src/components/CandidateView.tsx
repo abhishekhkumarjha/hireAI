@@ -71,7 +71,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
   // States
   const [activeStep, setActiveStep] = useState<number>(1);
   const [selectedBootcampId, setSelectedBootcampId] = useState<string>(() => {
-    return localStorage.getItem('zeptrax_selected_job_id') || 'job_ai_bootcamp';
+    return localStorage.getItem('cloudinntech_selected_job_id') || 'job_ai_bootcamp';
   });
 
   // Autosave indicators
@@ -139,7 +139,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
 
   // Autosave cache read on mount
   useEffect(() => {
-    const savedDraft = localStorage.getItem('zeptrax_app_draft');
+    const savedDraft = localStorage.getItem('cloudinntech_app_draft');
     if (savedDraft) {
       try {
         const data = JSON.parse(savedDraft);
@@ -179,7 +179,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
     };
 
     const timer = setTimeout(() => {
-      localStorage.setItem('zeptrax_app_draft', JSON.stringify(draftData));
+      localStorage.setItem('cloudinntech_app_draft', JSON.stringify(draftData));
       setIsSavingDraft(true);
       setLastSaved(new Date().toLocaleTimeString());
       const hideTimer = setTimeout(() => setIsSavingDraft(false), 2000);
@@ -348,7 +348,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
     });
     
     // Clear autosave draft cache
-    localStorage.removeItem('zeptrax_app_draft');
+    localStorage.removeItem('cloudinntech_app_draft');
   };
 
   const handleUpgradeToPremium = () => {
@@ -375,7 +375,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
     setTimeout(() => {
       let response = "That's an excellent question! In our curriculum, we cover this concept in detail. Let me know if you want to run a code sandbox.";
       if (query.includes("python")) {
-        response = "Python is the core language of Zeptrax. We use it for data manipulation, neural network definitions with PyTorch, and managing prompt loops. Check out Lesson 1 resources for code snippets.";
+        response = "Python is the core language of CloudInnTech. We use it for data manipulation, neural network definitions with PyTorch, and managing prompt loops. Check out Lesson 1 resources for code snippets.";
       } else if (query.includes("agent") || query.includes("agentic")) {
         response = "Agentic AI refers to models that have tool access, loop workflows, and self-evaluation. LangGraph and CrewAI are standard multi-agent orchestration frameworks we study in Module 3.";
       } else if (query.includes("aws") || query.includes("cloud")) {
@@ -537,7 +537,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
   // GATES & WORKSPACES RENDER
   // =============================================================
 
-  // Approved Student attempting to use apply.zeptrax.ai is redirected!
+  // Approved Student attempting to use apply.cloudinntech.co.in is redirected!
   if (portalHost === 'apply' && profile.enrollmentStatus === 'student') {
     return (
       <div className="max-w-2xl mx-auto p-8 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-6 shadow-xl relative overflow-hidden">
@@ -550,7 +550,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
           </span>
           <h3 className="text-2xl font-black text-white tracking-tight">Your application has been accepted!</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-            Congratulations, **{profile.fullName}**! Your student account has been created and assigned to **{activeBootcamp.title}** (Batch August).
+            Congratulations, <strong className="font-bold text-white">{profile.fullName}</strong>! Your student account has been created and assigned to <strong className="font-bold text-white">{activeBootcamp.title}</strong> (Batch August).
             Your workspace is active on the learning platform.
           </p>
         </div>
@@ -562,7 +562,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Learning Workspace:</span>
-            <span className="text-emerald-400 font-extrabold font-bold">app.zeptrax.ai</span>
+            <span className="text-emerald-400 font-extrabold font-bold">app.cloudinntech.co.in</span>
           </div>
         </div>
 
@@ -573,12 +573,12 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
           <button
             onClick={(e) => {
               e.preventDefault();
-              const event = new CustomEvent('zeptrax-switch-portal', { detail: 'app' });
+              const event = new CustomEvent('cloudinntech-switch-portal', { detail: 'app' });
               window.dispatchEvent(event);
             }}
             className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md tracking-wider transition uppercase inline-block cursor-pointer"
           >
-            Launch app.zeptrax.ai LMS
+            Launch app.cloudinntech.co.in LMS
           </button>
         </div>
       </div>
@@ -598,7 +598,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
           </span>
           <h3 className="text-2xl font-black text-white tracking-tight">Your application is under review</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-            Your application for the **{activeBootcamp.title}** has been received. 
+            Your application for the <strong className="font-bold text-white">{activeBootcamp.title}</strong> has been received. 
             Sign-in access to the student workspace is locked until your profile is approved.
           </p>
         </div>
@@ -646,7 +646,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
           </span>
           <h3 className="text-2xl font-black text-white tracking-tight">Application Status: Rejected</h3>
           <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-            Thank you for applying to the **{activeBootcamp.title}**. After reviewing your profile, we are unable to approve your application.
+            Thank you for applying to the <strong className="font-bold text-white">{activeBootcamp.title}</strong>. After reviewing your profile, we are unable to approve your application.
           </p>
         </div>
 
@@ -685,7 +685,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
               <Zap className="w-3 h-3 text-cyan-400" />
               <span>Standard Student Plan Available</span>
             </div>
-            <h2 className="text-2xl font-black text-white tracking-tight">Upgrade to Zeptrax Premium Masters</h2>
+            <h2 className="text-2xl font-black text-white tracking-tight">Upgrade to CloudInnTech Premium Masters</h2>
             <p className="text-xs text-slate-300 max-w-xl">
               Unlock certified live classes, 1-on-1 mentorship, comprehensive Git code reviews, and placement assistance with average starting salaries of ₹8,00,000–₹18,00,000.
             </p>
@@ -845,7 +845,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
           <div className="space-y-1">
             <h2 className="text-2xl font-black text-white tracking-tight">Welcome Back, {profile.fullName}! 👋</h2>
             <p className="text-xs text-slate-400">
-              You are actively enrolled in the **{activeBootcamp.title}** cohort. Let's make today count!
+              You are actively enrolled in the <strong className="font-bold text-white">{activeBootcamp.title}</strong> cohort. Let's make today count!
             </p>
           </div>
           <span className="hidden sm:inline-flex px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full text-xs font-extrabold uppercase">
@@ -948,7 +948,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
                   <button 
                     onClick={() => {
                       const doc = new jsPDF();
-                      doc.text("ZEPTRAX AI BOOTCAMP GRADUATION", 20, 20);
+                      doc.text("CLOUDINNTECH BOOTCAMP GRADUATION", 20, 20);
                       doc.text(`Student: ${profile.fullName}`, 20, 30);
                       doc.text(`Admissions Score: ${profile.admissionScore}%`, 20, 40);
                       doc.save('certificate.pdf');
@@ -1050,7 +1050,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
                 value={selectedBootcampId}
                 onChange={(e) => {
                   setSelectedBootcampId(e.target.value);
-                  localStorage.setItem('zeptrax_selected_job_id', e.target.value);
+                  localStorage.setItem('cloudinntech_selected_job_id', e.target.value);
                 }}
                 className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-[10px] text-cyan-300 font-black focus:outline-none"
               >
@@ -1390,7 +1390,7 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
                     <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
                     <h4 className="text-base font-extrabold text-white">Admissions Quiz Complete!</h4>
                     <p className="text-xs text-slate-400 max-w-md mx-auto">
-                      You scored **{quizScore}%** on your initial career alignment quiz. To complete your admission profile, launch the AI chatbot screening.
+                      You scored <strong className="font-bold text-white">{quizScore}%</strong> on your initial career alignment quiz. To complete your admission profile, launch the AI chatbot screening.
                     </p>
                     <button
                       onClick={handleLaunchAdmissionsInterview}

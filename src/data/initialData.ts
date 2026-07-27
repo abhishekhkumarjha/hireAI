@@ -13,7 +13,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'usr_recruiter_rahul',
     name: 'Rahul Sharma',
-    email: 'rahul@zeptrax.ai',
+    email: 'rahul@cloudinntech.co.in',
     password: 'password123',
     role: 'recruiter',
     provider: 'email',
@@ -22,7 +22,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'usr_recruiter_john',
     name: 'John',
-    email: 'john@zeptrax.ai',
+    email: 'john@cloudinntech.co.in',
     password: 'password123',
     role: 'recruiter',
     provider: 'email',
@@ -253,7 +253,7 @@ export const INITIAL_CVS: CVItem[] = [
   }
 ];
 
-const ZEPTRAX_COURSE_INFO = {
+const CLOUDINNTECH_COURSE_INFO = {
   duration: '3–4 Months',
   schedule: 'Weekend live training — Saturday: 2 hours, Sunday: 2 hours',
   format: '100% online live instructor-led interactive classes',
@@ -279,7 +279,7 @@ const ZEPTRAX_COURSE_INFO = {
   },
 };
 
-const ZEPTRAX_MASTERS_PROGRAMS: Array<{ id: string; title: string; domain: Job['domain'] }> = [
+const CLOUDINNTECH_MASTERS_PROGRAMS: Array<{ id: string; title: string; domain: Job['domain'] }> = [
   { id: 'job_ai_bootcamp', title: 'Masters in AI with Project Management', domain: 'Product' },
   { id: 'job_business_intelligence_bootcamp', title: 'Masters in AI with Business Intelligence', domain: 'Data & AI' },
   { id: 'job_data_science_bootcamp', title: 'Masters in AI with Data Science', domain: 'Data & AI' },
@@ -317,7 +317,7 @@ export const INITIAL_JOBS: Job[] = [
   {
     id: 'job_ai_bootcamp',
     title: 'Masters in AI with Project Management',
-    company: 'Zeptrax AI Academy',
+    company: 'CloudInnTech Academy',
     location: 'Noida & Remote',
     type: 'Full-time',
     domain: 'Data & AI',
@@ -328,12 +328,12 @@ export const INITIAL_JOBS: Job[] = [
     postedBy: 'usr_super_admin',
     createdAt: '2026-01-01T00:00:00Z',
     interviewTypeDefault: 'ai'
-    ,courseInfo: ZEPTRAX_COURSE_INFO
+    ,courseInfo: CLOUDINNTECH_COURSE_INFO
   },
   {
     id: 'job_devops_bootcamp',
     title: 'Masters in AI with AWS DevOps Engineering',
-    company: 'Zeptrax AI Academy',
+    company: 'CloudInnTech Academy',
     location: 'Bengaluru & Remote',
     type: 'Hybrid',
     domain: 'DevOps',
@@ -344,14 +344,14 @@ export const INITIAL_JOBS: Job[] = [
     postedBy: 'usr_super_admin',
     createdAt: '2026-01-02T00:00:00Z',
     interviewTypeDefault: 'ai',
-    courseInfo: ZEPTRAX_COURSE_INFO
+    courseInfo: CLOUDINNTECH_COURSE_INFO
   },
-  ...ZEPTRAX_MASTERS_PROGRAMS
+  ...CLOUDINNTECH_MASTERS_PROGRAMS
     .filter((program) => program.id !== 'job_ai_bootcamp' && program.id !== 'job_devops_bootcamp')
     .map((program) => ({
       id: program.id,
       title: program.title,
-      company: 'Zeptrax AI Edutech',
+      company: 'CloudInnTech Edutech',
       location: '100% Online Live',
       type: 'Remote' as const,
       domain: program.domain,
@@ -362,13 +362,13 @@ export const INITIAL_JOBS: Job[] = [
       postedBy: 'usr_super_admin',
       createdAt: '2026-01-01T00:00:00Z',
       interviewTypeDefault: 'ai' as const,
-      courseInfo: ZEPTRAX_COURSE_INFO,
+      courseInfo: CLOUDINNTECH_COURSE_INFO,
     })),
   // 2. Careers Job Postings
   {
     id: 'job_senior_dev',
     title: 'Senior Software Developer',
-    company: 'Zeptrax Tech Corp',
+    company: 'CloudInnTech Corp',
     location: 'Noida Office',
     type: 'Full-time',
     domain: 'Engineering',
@@ -383,7 +383,7 @@ export const INITIAL_JOBS: Job[] = [
   {
     id: 'job_security_analyst',
     title: 'Cybersecurity Specialist',
-    company: 'Zeptrax Tech Corp',
+    company: 'CloudInnTech Corp',
     location: 'Remote',
     type: 'Full-time',
     domain: 'DevOps',
@@ -437,9 +437,9 @@ export const INITIAL_INTERVIEWS: InterviewRecord[] = [];
 export const INITIAL_OFFER_TEMPLATES: OfferTemplate[] = [
   {
     id: 'tmpl_standard_tech',
-    name: 'Zeptrax AI Master Bootcamp Admission Confirmation',
-    companyName: 'Zeptrax AI Academy',
-    headerText: 'ADMISSION LETTER — ZEPTRAX AI BOOTCAMP',
+    name: 'CloudInnTech Master Bootcamp Admission Confirmation',
+    companyName: 'CloudInnTech Academy',
+    headerText: 'ADMISSION LETTER — CLOUDINNTECH BOOTCAMP',
     bodyTemplate: 'Dear {{candidate_name}},\n\nWe are thrilled to offer you admission into the {{role}} at {{company_name}}! Based on your outstanding interview performance and tech profile, we believe you are fully prepared for this rigorous cohort.\n\nYour program effective start date will be {{joining_date}}. Upon accepting, you will gain access to your Student Workspace.',
     benefitsList: [
       'Interactive Live Classes & 24/7 Slack/Discord Community support',

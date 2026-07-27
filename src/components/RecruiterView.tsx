@@ -92,10 +92,10 @@ export const RecruiterView: React.FC = () => {
       }
       // Recruiters see Job Postings:
       if (currentUser?.role === 'recruiter') {
-        if (currentUser?.email === 'rahul@zeptrax.ai' && job.id !== 'job_senior_dev') {
+        if (currentUser?.email === 'rahul@cloudinntech.co.in' && job.id !== 'job_senior_dev') {
           return false;
         }
-        if (currentUser?.email === 'john@zeptrax.ai' && job.id !== 'job_security_analyst') {
+        if (currentUser?.email === 'john@cloudinntech.co.in' && job.id !== 'job_security_analyst') {
           return false;
         }
       }
