@@ -1,15 +1,101 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
+import {
+  INITIAL_USERS,
+  INITIAL_CANDIDATE_PROFILES,
+  INITIAL_CVS,
+  INITIAL_JOBS,
+  INITIAL_APPLICATIONS,
+  INITIAL_INTERVIEWS,
+  INITIAL_OFFER_TEMPLATES,
+  INITIAL_OFFER_LETTERS,
+  INITIAL_INVITE_TOKENS,
+} from './src/data/initialData';
 
 dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
+const DB_FILE = path.join(process.cwd(), 'db.json');
+
+// Initialize database file with initial mock data if not existing
+function initDb() {
+  if (!fs.existsSync(DB_FILE)) {
+    const initialDb = {
+      users: INITIAL_USERS,
+      candidateProfiles: INITIAL_CANDIDATE_PROFILES,
+      cvs: INITIAL_CVS,
+      jobs: INITIAL_JOBS,
+      applications: INITIAL_APPLICATIONS,
+      interviews: INITIAL_INTERVIEWS,
+      offerTemplates: INITIAL_OFFER_TEMPLATES,
+      offerLetters: INITIAL_OFFER_LETTERS,
+      invites: INITIAL_INVITE_TOKENS,
+      searchChatHistory: [],
+    };
+    fs.writeFileSync(DB_FILE, JSON.stringify(initialDb, null, 2), 'utf-8');
+  }
+}
+
+// Read database file
+function readDb() {
+  initDb();
+  try {
+    const data = fs.readFileSync(DB_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error reading db.json:', err);
+    return {};
+  }
+}
+
+// Write database file
+function writeDb(dbData: any) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error writing db.json:', err);
+  }
+}
+
+// Configure CORS to allow cross-origin requests
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
 app.use(express.json({ limit: '10mb' }));
+
+// Database APIs
+app.get('/api/db', (req, res) => {
+  const db = readDb();
+  res.json({ success: true, db });
+});
+
+app.post('/api/db/sync', (req, res) => {
+  const { collection, data } = req.body;
+  if (!collection || !Array.isArray(data)) {
+    res.status(400).json({ error: 'collection name and data array required' });
+    return;
+  }
+  
+  const db = readDb();
+  db[collection] = data;
+  writeDb(db);
+  
+  res.json({ success: true, db });
+});
 
 // Initialize Gemini Client
 const ai = new GoogleGenAI({

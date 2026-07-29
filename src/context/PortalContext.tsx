@@ -164,8 +164,86 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isAiSearching, setIsAiSearching] = useState<boolean>(false);
   const [permissionMatrix] = useState<PermissionMatrixItem[]>(PERMISSION_MATRIX);
 
-  // Sync to localStorage
-  useEffect(() => { localStorage.setItem('hireai_users', JSON.stringify(users)); }, [users]);
+  const lastSyncedRefs = React.useRef<{ [key: string]: string }>({});
+
+  const syncCollection = async (collection: string, data: any) => {
+    const dataStr = JSON.stringify(data);
+    if (lastSyncedRefs.current[collection] === dataStr) return;
+    lastSyncedRefs.current[collection] = dataStr;
+
+    try {
+      await fetch(`${API_BASE}/api/db/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collection, data }),
+      });
+    } catch (err) {
+      console.error(`Failed to sync collection ${collection}:`, err);
+    }
+  };
+
+  // Fetch remote database on startup
+  useEffect(() => {
+    const fetchDb = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/db`);
+        const result = await res.json();
+        if (result.success && result.db) {
+          const db = result.db;
+          if (db.users) {
+            setUsers(db.users);
+            lastSyncedRefs.current['users'] = JSON.stringify(db.users);
+          }
+          if (db.candidateProfiles) {
+            setCandidateProfiles(db.candidateProfiles);
+            lastSyncedRefs.current['candidateProfiles'] = JSON.stringify(db.candidateProfiles);
+          }
+          if (db.cvs) {
+            setCvs(db.cvs);
+            lastSyncedRefs.current['cvs'] = JSON.stringify(db.cvs);
+          }
+          if (db.jobs) {
+            setJobs(db.jobs);
+            lastSyncedRefs.current['jobs'] = JSON.stringify(db.jobs);
+          }
+          if (db.applications) {
+            setApplications(db.applications);
+            lastSyncedRefs.current['applications'] = JSON.stringify(db.applications);
+          }
+          if (db.interviews) {
+            setInterviews(db.interviews);
+            lastSyncedRefs.current['interviews'] = JSON.stringify(db.interviews);
+          }
+          if (db.offerTemplates) {
+            setOfferTemplates(db.offerTemplates);
+            lastSyncedRefs.current['offerTemplates'] = JSON.stringify(db.offerTemplates);
+          }
+          if (db.offerLetters) {
+            setOfferLetters(db.offerLetters);
+            lastSyncedRefs.current['offerLetters'] = JSON.stringify(db.offerLetters);
+          }
+          if (db.invites) {
+            setInvites(db.invites);
+            lastSyncedRefs.current['invites'] = JSON.stringify(db.invites);
+          }
+          if (db.searchChatHistory) {
+            setSearchChatHistory(db.searchChatHistory);
+            lastSyncedRefs.current['searchChatHistory'] = JSON.stringify(db.searchChatHistory);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch initial database from backend:', err);
+      }
+    };
+    fetchDb();
+  }, []);
+
+  // Sync to localStorage and Remote DB
+  useEffect(() => { 
+    localStorage.setItem('hireai_users', JSON.stringify(users)); 
+    syncCollection('users', users);
+  }, [users]);
+
   useEffect(() => { 
     if (currentUser) {
       localStorage.setItem('hireai_current_user', JSON.stringify(currentUser));
@@ -173,15 +251,51 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       localStorage.removeItem('hireai_current_user');
     }
   }, [currentUser]);
-  useEffect(() => { localStorage.setItem('hireai_candidate_profiles', JSON.stringify(candidateProfiles)); }, [candidateProfiles]);
-  useEffect(() => { localStorage.setItem('hireai_cvs', JSON.stringify(cvs)); }, [cvs]);
-  useEffect(() => { localStorage.setItem('hireai_jobs', JSON.stringify(jobs)); }, [jobs]);
-  useEffect(() => { localStorage.setItem('hireai_applications', JSON.stringify(applications)); }, [applications]);
-  useEffect(() => { localStorage.setItem('hireai_interviews', JSON.stringify(interviews)); }, [interviews]);
-  useEffect(() => { localStorage.setItem('hireai_offer_templates', JSON.stringify(offerTemplates)); }, [offerTemplates]);
-  useEffect(() => { localStorage.setItem('hireai_offer_letters', JSON.stringify(offerLetters)); }, [offerLetters]);
-  useEffect(() => { localStorage.setItem('hireai_invites', JSON.stringify(invites)); }, [invites]);
-  useEffect(() => { localStorage.setItem('hireai_search_chat_history', JSON.stringify(searchChatHistory)); }, [searchChatHistory]);
+
+  useEffect(() => { 
+    localStorage.setItem('hireai_candidate_profiles', JSON.stringify(candidateProfiles)); 
+    syncCollection('candidateProfiles', candidateProfiles);
+  }, [candidateProfiles]);
+
+  useEffect(() => { 
+    localStorage.setItem('hireai_cvs', JSON.stringify(cvs)); 
+    syncCollection('cvs', cvs);
+  }, [cvs]);
+
+  useEffect(() => { 
+    localStorage.setItem('hireai_jobs', JSON.stringify(jobs)); 
+    syncCollection('jobs', jobs);
+  }, [jobs]);
+
+  useEffect(() => { 
+    localStorage.setItem('hireai_applications', JSON.stringify(applications)); 
+    syncCollection('applications', applications);
+  }, [applications]);
+
+  useEffect(() => { 
+    localStorage.setItem('hireai_interviews', JSON.stringify(interviews)); 
+    syncCollection('interviews', interviews);
+  }, [interviews]);
+
+  useEffect(() => { 
+    localStorage.setItem('hireai_offer_templates', JSON.stringify(offerTemplates)); 
+    syncCollection('offerTemplates', offerTemplates);
+  }, [offerTemplates]);
+
+  useEffect(() => { 
+    localStorage.setItem('hireai_offer_letters', JSON.stringify(offerLetters)); 
+    syncCollection('offerLetters', offerLetters);
+  }, [offerLetters]);
+
+  useEffect(() => { 
+    localStorage.setItem('hireai_invites', JSON.stringify(invites)); 
+    syncCollection('invites', invites);
+  }, [invites]);
+
+  useEffect(() => { 
+    localStorage.setItem('hireai_search_chat_history', JSON.stringify(searchChatHistory)); 
+    syncCollection('searchChatHistory', searchChatHistory);
+  }, [searchChatHistory]);
 
   // Clean old mock data if present to ensure 1 admin and fresh signup states
   useEffect(() => {
@@ -217,70 +331,93 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => window.removeEventListener('storage', handleStorageSync);
   }, []);
 
-  // Polling mechanism for cross-portal sync (backup for storage event)
+  // Polling mechanism for cross-portal/cross-domain remote database sync
   useEffect(() => {
-    const pollInterval = setInterval(() => {
-      const storedUsers = localStorage.getItem('hireai_users');
-      const storedApplications = localStorage.getItem('hireai_applications');
-      const storedInterviews = localStorage.getItem('hireai_interviews');
-      const storedOffers = localStorage.getItem('hireai_offer_letters');
-      const storedInvites = localStorage.getItem('hireai_invites');
-      const storedJobs = localStorage.getItem('hireai_jobs');
-      const storedProfiles = localStorage.getItem('hireai_candidate_profiles');
-      const storedCvs = localStorage.getItem('hireai_cvs');
-
-      if (storedUsers) {
-        const parsed = JSON.parse(storedUsers);
-        if (JSON.stringify(parsed) !== JSON.stringify(users)) {
-          setUsers(parsed);
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/db`);
+        const result = await res.json();
+        if (result.success && result.db) {
+          const db = result.db;
+          
+          if (db.users) {
+            const dataStr = JSON.stringify(db.users);
+            if (dataStr !== JSON.stringify(users)) {
+              setUsers(db.users);
+              lastSyncedRefs.current['users'] = dataStr;
+            }
+          }
+          if (db.candidateProfiles) {
+            const dataStr = JSON.stringify(db.candidateProfiles);
+            if (dataStr !== JSON.stringify(candidateProfiles)) {
+              setCandidateProfiles(db.candidateProfiles);
+              lastSyncedRefs.current['candidateProfiles'] = dataStr;
+            }
+          }
+          if (db.cvs) {
+            const dataStr = JSON.stringify(db.cvs);
+            if (dataStr !== JSON.stringify(cvs)) {
+              setCvs(db.cvs);
+              lastSyncedRefs.current['cvs'] = dataStr;
+            }
+          }
+          if (db.jobs) {
+            const dataStr = JSON.stringify(db.jobs);
+            if (dataStr !== JSON.stringify(jobs)) {
+              setJobs(db.jobs);
+              lastSyncedRefs.current['jobs'] = dataStr;
+            }
+          }
+          if (db.applications) {
+            const dataStr = JSON.stringify(db.applications);
+            if (dataStr !== JSON.stringify(applications)) {
+              setApplications(db.applications);
+              lastSyncedRefs.current['applications'] = dataStr;
+            }
+          }
+          if (db.interviews) {
+            const dataStr = JSON.stringify(db.interviews);
+            if (dataStr !== JSON.stringify(interviews)) {
+              setInterviews(db.interviews);
+              lastSyncedRefs.current['interviews'] = dataStr;
+            }
+          }
+          if (db.offerTemplates) {
+            const dataStr = JSON.stringify(db.offerTemplates);
+            if (dataStr !== JSON.stringify(offerTemplates)) {
+              setOfferTemplates(db.offerTemplates);
+              lastSyncedRefs.current['offerTemplates'] = dataStr;
+            }
+          }
+          if (db.offerLetters) {
+            const dataStr = JSON.stringify(db.offerLetters);
+            if (dataStr !== JSON.stringify(offerLetters)) {
+              setOfferLetters(db.offerLetters);
+              lastSyncedRefs.current['offerLetters'] = dataStr;
+            }
+          }
+          if (db.invites) {
+            const dataStr = JSON.stringify(db.invites);
+            if (dataStr !== JSON.stringify(invites)) {
+              setInvites(db.invites);
+              lastSyncedRefs.current['invites'] = dataStr;
+            }
+          }
+          if (db.searchChatHistory) {
+            const dataStr = JSON.stringify(db.searchChatHistory);
+            if (dataStr !== JSON.stringify(searchChatHistory)) {
+              setSearchChatHistory(db.searchChatHistory);
+              lastSyncedRefs.current['searchChatHistory'] = dataStr;
+            }
+          }
         }
+      } catch (err) {
+        console.error('Failed to sync-poll from remote database:', err);
       }
-      if (storedApplications) {
-        const parsed = JSON.parse(storedApplications);
-        if (JSON.stringify(parsed) !== JSON.stringify(applications)) {
-          setApplications(parsed);
-        }
-      }
-      if (storedInterviews) {
-        const parsed = JSON.parse(storedInterviews);
-        if (JSON.stringify(parsed) !== JSON.stringify(interviews)) {
-          setInterviews(parsed);
-        }
-      }
-      if (storedOffers) {
-        const parsed = JSON.parse(storedOffers);
-        if (JSON.stringify(parsed) !== JSON.stringify(offerLetters)) {
-          setOfferLetters(parsed);
-        }
-      }
-      if (storedInvites) {
-        const parsed = JSON.parse(storedInvites);
-        if (JSON.stringify(parsed) !== JSON.stringify(invites)) {
-          setInvites(parsed);
-        }
-      }
-      if (storedJobs) {
-        const parsed = JSON.parse(storedJobs);
-        if (JSON.stringify(parsed) !== JSON.stringify(jobs)) {
-          setJobs(parsed);
-        }
-      }
-      if (storedProfiles) {
-        const parsed = JSON.parse(storedProfiles);
-        if (JSON.stringify(parsed) !== JSON.stringify(candidateProfiles)) {
-          setCandidateProfiles(parsed);
-        }
-      }
-      if (storedCvs) {
-        const parsed = JSON.parse(storedCvs);
-        if (JSON.stringify(parsed) !== JSON.stringify(cvs)) {
-          setCvs(parsed);
-        }
-      }
-    }, 2000); // Poll every 2 seconds
+    }, 5000); // Poll every 5 seconds for backend updates
 
     return () => clearInterval(pollInterval);
-  }, [users, applications, interviews, offerLetters, invites, jobs, candidateProfiles, cvs]);
+  }, [users, candidateProfiles, cvs, jobs, applications, interviews, offerTemplates, offerLetters, invites, searchChatHistory]);
 
   const switchRole = (role: UserRole) => {
     const found = users.find((u) => u.role === role);
