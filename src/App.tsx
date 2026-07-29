@@ -19,7 +19,14 @@ type AuthIntent = 'candidate' | 'recruiter' | 'admin';
 const MainLayout: React.FC = () => {
   const { currentUser, candidateProfiles, updateProfile } = usePortal();
   const [isMatrixOpen, setIsMatrixOpen] = useState(false);
-  const [portalHost, setPortalHost] = useState<PortalHost>('landing');
+  const [portalHost, setPortalHost] = useState<PortalHost>(() => {
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    if (path === '/portal' || path === '/signin' || params.has('portal')) {
+      return 'auth';
+    }
+    return 'landing';
+  });
   const [authIntent, setAuthIntent] = useState<AuthIntent | null>(null);
   const isCandidateStudent = !!(currentUser && (currentUser.role === 'candidate' || candidateProfiles.find(p => p.userId === currentUser.id)?.enrollmentStatus === 'student'));
 
@@ -44,6 +51,16 @@ const MainLayout: React.FC = () => {
     window.addEventListener('cloudinntech-switch-portal', handleSwitch);
     return () => window.removeEventListener('cloudinntech-switch-portal', handleSwitch);
   }, []);
+
+  const handleBackToHome = () => {
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    if (path === '/portal' || path === '/signin' || params.has('portal')) {
+      window.location.href = '/';
+    } else {
+      setPortalHost('landing');
+    }
+  };
 
   // ── Landing Page CTA handler: always goes through auth gate first ──
   const handleEnterPortal = (mode?: 'apply' | 'free' | 'signin', targetId?: string) => {
@@ -99,7 +116,7 @@ const MainLayout: React.FC = () => {
         {/* ── AUTHENTICATION GATE (always shown before portal if not logged in) ── */}
         {portalHost === 'auth' && (
           <AuthView
-            onBackToLanding={() => setPortalHost('landing')}
+            onBackToLanding={handleBackToHome}
             onAuthenticated={() => setPortalHost('app')}
           />
         )}
@@ -110,14 +127,14 @@ const MainLayout: React.FC = () => {
             {!currentUser ? (
               /* Session expired / logged out → back to auth gate */
               <AuthView
-                onBackToLanding={() => setPortalHost('landing')}
+                onBackToLanding={handleBackToHome}
                 onAuthenticated={() => setPortalHost('app')}
               />
             ) : (
               <div className="flex-1 flex flex-col">
                 <Header
                   onOpenMatrix={() => setIsMatrixOpen(true)}
-                  onGoHome={() => setPortalHost('landing')}
+                  onGoHome={handleBackToHome}
                 />
 
                 <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">

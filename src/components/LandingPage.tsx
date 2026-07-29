@@ -186,29 +186,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
           </nav>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => enterAs('recruiter')}
-              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-200 transition flex items-center gap-1.5"
-            >
-              <Briefcase className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Recruiter</span>
-            </button>
-            <button
-              onClick={() => onEnterPortal('signin')}
-              className="px-4 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/25 transition flex items-center gap-1.5"
-            >
-              {isLoggedIn ? (
-                <>
-                  <span>My Portal</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
+            {/* Portal login options removed from the landing page to enforce domain separation */}
           </div>
         </div>
       </header>
