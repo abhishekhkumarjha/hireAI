@@ -167,7 +167,7 @@ export const LandingApplyWizard: React.FC<LandingApplyWizardProps> = ({ onSucces
   // Wizard state
   const [activeStep, setActiveStep] = useState<number>(1);
   const [selectedBootcampId, setSelectedBootcampId] = useState<string>(() => {
-    return localStorage.getItem('zeptrax_selected_job_id') || 'job_ai_bootcamp';
+    return localStorage.getItem('cloudinntech_selected_job_id') || 'job_ai_bootcamp';
   });
 
   const activeBootcamp = jobs.find(j => j.id === selectedBootcampId) || jobs[0];
@@ -226,7 +226,7 @@ export const LandingApplyWizard: React.FC<LandingApplyWizardProps> = ({ onSucces
   const [lastSaved, setLastSaved] = useState('');
 
   useEffect(() => {
-    const savedDraft = localStorage.getItem('zeptrax_landing_draft');
+    const savedDraft = localStorage.getItem('cloudinntech_landing_draft');
     if (savedDraft) {
       try {
         const data = JSON.parse(savedDraft);
@@ -253,7 +253,7 @@ export const LandingApplyWizard: React.FC<LandingApplyWizardProps> = ({ onSucces
   useEffect(() => {
     const draft = { name, email, phone, location, bio, degree, institution, gradYear, company, expRole, expDuration, expDesc, cvText, activeStep };
     const timer = setTimeout(() => {
-      localStorage.setItem('zeptrax_landing_draft', JSON.stringify(draft));
+      localStorage.setItem('cloudinntech_landing_draft', JSON.stringify(draft));
       setIsSavingDraft(true);
       setLastSaved(new Date().toLocaleTimeString());
       const clearSave = setTimeout(() => setIsSavingDraft(false), 1500);
@@ -360,7 +360,7 @@ export const LandingApplyWizard: React.FC<LandingApplyWizardProps> = ({ onSucces
   const handleStartAIInterview = () => {
     setAiInterviewActive(true);
     setChatMessages([
-      { sender: 'ai', text: `Welcome ${name}! I am the Zeptrax Admissions evaluator. ${interviewQuestions[0].question}` }
+      { sender: 'ai', text: `Welcome ${name}! I am the CloudInnTech Admissions evaluator. ${interviewQuestions[0].question}` }
     ]);
   };
 
@@ -412,7 +412,7 @@ export const LandingApplyWizard: React.FC<LandingApplyWizardProps> = ({ onSucces
 
     submitAdmissionsApplication(name, email, password, profileDetails, selectedBootcampId);
     alert('Admissions application file submitted directly to the tracking portal!');
-    localStorage.removeItem('zeptrax_landing_draft');
+    localStorage.removeItem('cloudinntech_landing_draft');
     onSuccess();
   };
 
@@ -432,7 +432,7 @@ export const LandingApplyWizard: React.FC<LandingApplyWizardProps> = ({ onSucces
               <Cpu className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-extrabold text-xl text-white tracking-tight">Zeptrax AI</span>
+              <span className="font-extrabold text-xl text-white tracking-tight">CloudInnTech</span>
               <span className="block text-[9px] font-semibold text-slate-400 tracking-wider uppercase">Application Portal</span>
             </div>
           </div>
@@ -464,7 +464,7 @@ export const LandingApplyWizard: React.FC<LandingApplyWizardProps> = ({ onSucces
                   value={selectedBootcampId}
                   onChange={(e) => {
                     setSelectedBootcampId(e.target.value);
-                    localStorage.setItem('zeptrax_selected_job_id', e.target.value);
+                    localStorage.setItem('cloudinntech_selected_job_id', e.target.value);
                   }}
                   className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-[10px] text-cyan-300 font-black focus:outline-none cursor-pointer"
                 >
@@ -1059,7 +1059,7 @@ export const LandingApplyWizard: React.FC<LandingApplyWizardProps> = ({ onSucces
       {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-900 py-8 px-4 text-center text-slate-500 mt-12">
         <p className="text-[10px]">
-          © {new Date().getFullYear()} CloudInnTech. All rights reserved. | Contact: info@zeptrax.ai | WhatsApp Support: +91-8368544821
+          © {new Date().getFullYear()} CloudInnTech. All rights reserved. | Contact: info@cloudinntech.co.in | WhatsApp Support: +91-8368544821
         </p>
       </footer>
     </div>
