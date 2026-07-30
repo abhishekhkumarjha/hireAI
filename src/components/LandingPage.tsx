@@ -44,8 +44,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
     if (onEnterPortalAs) onEnterPortalAs(intent);
     else onEnterPortal('signin');
   };
-  // Tabs for Hire vs Learn platforms
-  const [activeTab, setActiveTab] = useState<'hire' | 'learn'>('hire');
+
   
   // States for interactive AI search simulation
   const [searchPrompt, setSearchPrompt] = useState('');
@@ -178,7 +177,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
           </div>
 
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-300">
-            <a href="#features" className="hover:text-white transition">Platform</a>
             <a href="#demo" className="hover:text-white transition">Demo</a>
             <a href="#courses" className="hover:text-white transition">Programs</a>
             <a href="#pricing" className="hover:text-white transition">Pricing</a>
@@ -242,146 +240,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
         </div>
       </section>
 
-      {/* Main Feature Tabs section */}
-      <section id="features" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <h2 className="text-3xl font-extrabold text-white">Dual-Core Ecosystem Architecture</h2>
-          <p className="text-sm text-slate-400 mt-2">
-            CloudInnTech integrates industry-grade recruitment automation with curriculum-focused technical learning.
-          </p>
-        </div>
 
-        {/* Tab Buttons */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex p-1 rounded-xl bg-slate-900 border border-slate-800">
-            <button
-              onClick={() => setActiveTab('hire')}
-              className={`px-6 py-2.5 rounded-lg text-xs font-extrabold transition-all flex items-center gap-2 ${
-                activeTab === 'hire' 
-                  ? 'bg-indigo-600 text-white shadow-md' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Briefcase className="w-3.5 h-3.5" />
-              <span>CloudInnTech HIRE</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('learn')}
-              className={`px-6 py-2.5 rounded-lg text-xs font-extrabold transition-all flex items-center gap-2 ${
-                activeTab === 'learn' 
-                  ? 'bg-indigo-600 text-white shadow-md' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>CloudInnTech EDUTECH</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Tab Contents */}
-        {activeTab === 'hire' ? (
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-indigo-500/30 transition-all flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4">
-                  <Terminal className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">Automated Screening Chats</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  Screen hundreds of candidates simultaneously using automated chat-based AI screening. Transcripts and metrics are compiled on scorecards immediately.
-                </p>
-              </div>
-              <ul className="mt-4 space-y-2 text-xs text-slate-300">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Real-time answer scoring</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Custom difficulty adjustment</li>
-              </ul>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-indigo-500/30 transition-all flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4">
-                  <Search className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">Natural Language Search</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  Recruiters can parse database profiles using natural language. Query skills, certifications, availability, and location without configuring complex SQL filters.
-                </p>
-              </div>
-              <ul className="mt-4 space-y-2 text-xs text-slate-300">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Semantic keyword matching</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Auto parsing of uploaded CVs</li>
-              </ul>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-indigo-500/30 transition-all flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-4">
-                  <Settings className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">Interactive Kanban Board</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  Organize candidates via an intuitive drag-and-drop workflow spanning Screening, Assessment, Verdict, and Offer Letter release. LocalStorage cross-tab sync triggers state alerts instantly.
-                </p>
-              </div>
-              <ul className="mt-4 space-y-2 text-xs text-slate-300">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Rupee compensation calculation</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" /> Dynamic e-signature integration</li>
-              </ul>
-            </div>
-          </div>
-        ) : (
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-cyan-500/30 transition-all flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4">
-                  <GraduationCap className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">AI-Focused Masters Programs</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  Rigorous, industry-mapped 4-month programs linking advanced AI/ML architectures with Cloud Computing, Cybersecurity, DevOps, and Product Management.
-                </p>
-              </div>
-              <ul className="mt-4 space-y-2 text-xs text-slate-300">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" /> Practical hands-on projects</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" /> Structured syllabus modules</li>
-              </ul>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-cyan-500/30 transition-all flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4">
-                  <Award className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">Blockchain-Verified Badges</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  Every graduation badge earned is minted with blockchain verification. Credentials can be instantly embedded on LinkedIn, CVs, or team profiles.
-                </p>
-              </div>
-              <ul className="mt-4 space-y-2 text-xs text-slate-300">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" /> Standalone embed code</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" /> Tamper-proof validation</li>
-              </ul>
-            </div>
-
-            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800 hover:border-cyan-500/30 transition-all flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 mb-4">
-                  <MessageSquare className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-white mb-2">Zep Voice Agent & Support</h3>
-                <p className="text-sm text-slate-400 leading-relaxed">
-                  Interactive support powered by our custom Zep Voice AI Agent. Directly coordinates class modules, schedules, and admissions inquiries via phone or WhatsApp.
-                </p>
-              </div>
-              <ul className="mt-4 space-y-2 text-xs text-slate-300">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" /> WhatsApp: +91-8368544821</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" /> 24/7 AI learning buddy</li>
-              </ul>
-            </div>
-          </div>
-        )}
-      </section>
 
       {/* Interactive AI Search Simulator */}
       <section id="demo" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto border-t border-slate-900">
