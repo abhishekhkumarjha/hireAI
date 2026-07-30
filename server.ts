@@ -22,44 +22,117 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
 const DB_FILE = path.join(process.cwd(), 'db.json');
+const isUpstashConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
-// Initialize database file with initial mock data if not existing
-function initDb() {
-  if (!fs.existsSync(DB_FILE)) {
-    const initialDb = {
-      users: INITIAL_USERS,
-      candidateProfiles: INITIAL_CANDIDATE_PROFILES,
-      cvs: INITIAL_CVS,
-      jobs: INITIAL_JOBS,
-      applications: INITIAL_APPLICATIONS,
-      interviews: INITIAL_INTERVIEWS,
-      offerTemplates: INITIAL_OFFER_TEMPLATES,
-      offerLetters: INITIAL_OFFER_LETTERS,
-      invites: INITIAL_INVITE_TOKENS,
-      searchChatHistory: [],
-    };
-    fs.writeFileSync(DB_FILE, JSON.stringify(initialDb, null, 2), 'utf-8');
+function getInitialDb() {
+  return {
+    users: INITIAL_USERS,
+    candidateProfiles: INITIAL_CANDIDATE_PROFILES,
+    cvs: INITIAL_CVS,
+    jobs: INITIAL_JOBS,
+    applications: INITIAL_APPLICATIONS,
+    interviews: INITIAL_INTERVIEWS,
+    offerTemplates: INITIAL_OFFER_TEMPLATES,
+    offerLetters: INITIAL_OFFER_LETTERS,
+    invites: INITIAL_INVITE_TOKENS,
+    searchChatHistory: [],
+  };
+}
+
+// Initialize database (Upstash or local file)
+async function initDb() {
+  if (isUpstashConfigured) {
+    console.log('Database Mode: Upstash Redis REST API');
+    try {
+      const db = await readDb();
+      if (!db || Object.keys(db).length === 0) {
+        console.log('Upstash Redis database is empty, initializing with mock data...');
+        await writeDb(getInitialDb());
+      }
+    } catch (err) {
+      console.error('Failed to initialize database in Upstash Redis, writing initial state:', err);
+      try {
+        await writeDb(getInitialDb());
+      } catch (writeErr) {
+        console.error('Failed to write initial state to Upstash Redis:', writeErr);
+      }
+    }
+  } else {
+    console.log('Database Mode: Local file-based database (db.json)');
+    if (!fs.existsSync(DB_FILE)) {
+      try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(getInitialDb(), null, 2), 'utf-8');
+      } catch (err) {
+        console.error('Error creating db.json:', err);
+      }
+    }
   }
 }
 
-// Read database file
-function readDb() {
-  initDb();
-  try {
-    const data = fs.readFileSync(DB_FILE, 'utf-8');
-    return JSON.parse(data);
-  } catch (err) {
-    console.error('Error reading db.json:', err);
-    return {};
+// Read database
+async function readDb(): Promise<any> {
+  if (isUpstashConfigured) {
+    try {
+      const url = `${process.env.UPSTASH_REDIS_REST_URL!.replace(/\/$/, '')}/`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(['GET', 'hire_ai_db_state'])
+      });
+      if (!res.ok) {
+        throw new Error(`Upstash response code: ${res.status}`);
+      }
+      const data: any = await res.json();
+      if (!data || data.result === null || data.result === undefined) {
+        return {};
+      }
+      return JSON.parse(data.result);
+    } catch (err) {
+      console.error('Error reading from Upstash Redis:', err);
+      return {};
+    }
+  } else {
+    try {
+      if (!fs.existsSync(DB_FILE)) {
+        return getInitialDb();
+      }
+      const data = fs.readFileSync(DB_FILE, 'utf-8');
+      return JSON.parse(data);
+    } catch (err) {
+      console.error('Error reading db.json:', err);
+      return {};
+    }
   }
 }
 
-// Write database file
-function writeDb(dbData: any) {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
-  } catch (err) {
-    console.error('Error writing db.json:', err);
+// Write database
+async function writeDb(dbData: any): Promise<void> {
+  if (isUpstashConfigured) {
+    try {
+      const url = `${process.env.UPSTASH_REDIS_REST_URL!.replace(/\/$/, '')}/`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(['SET', 'hire_ai_db_state', JSON.stringify(dbData)])
+      });
+      if (!res.ok) {
+        throw new Error(`Upstash response code: ${res.status}`);
+      }
+    } catch (err) {
+      console.error('Error writing to Upstash Redis:', err);
+    }
+  } else {
+    try {
+      fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('Error writing db.json:', err);
+    }
   }
 }
 
@@ -78,23 +151,32 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 
 // Database APIs
-app.get('/api/db', (req, res) => {
-  const db = readDb();
-  res.json({ success: true, db });
+app.get('/api/db', async (req, res) => {
+  try {
+    const db = await readDb();
+    res.json({ success: true, db });
+  } catch (error) {
+    console.error('Error reading database:', error);
+    res.status(500).json({ error: 'Failed to retrieve database data' });
+  }
 });
 
-app.post('/api/db/sync', (req, res) => {
+app.post('/api/db/sync', async (req, res) => {
   const { collection, data } = req.body;
   if (!collection || !Array.isArray(data)) {
     res.status(400).json({ error: 'collection name and data array required' });
     return;
   }
   
-  const db = readDb();
-  db[collection] = data;
-  writeDb(db);
-  
-  res.json({ success: true, db });
+  try {
+    const db = await readDb();
+    db[collection] = data;
+    await writeDb(db);
+    res.json({ success: true, db });
+  } catch (error) {
+    console.error('Error syncing database:', error);
+    res.status(500).json({ error: 'Failed to sync database data' });
+  }
 });
 
 // Initialize Gemini Client
@@ -559,6 +641,9 @@ We look forward to welcoming you to our team!`;
 
 // Setup Vite Development or Production Static Serving
 async function startServer() {
+  // Initialize the database asynchronously before starting the server
+  await initDb();
+
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },

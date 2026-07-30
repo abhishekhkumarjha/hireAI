@@ -18,6 +18,8 @@ Configure these variables in your deployment dashboards:
 | `PORT` | Yes (on Server) | `3000` | Port on which the Express server listens. Automatically assigned by Render. |
 | `GEMINI_API_KEY` | Optional | *None* | Your Gemini AI API Key from Google AI Studio. If omitted, the portal operates using offline fallback algorithms. |
 | `VITE_API_URL` | Yes (Vercel Frontend only) | *None* | Absolute URL of the backend API server hosted on Render (e.g., `https://your-backend.onrender.com`). |
+| `UPSTASH_REDIS_REST_URL` | Optional | *None* | The REST API URL for your Upstash Redis database (enables persistent storage). |
+| `UPSTASH_REDIS_REST_TOKEN` | Optional | *None* | The REST API read/write token for your Upstash Redis database (enables persistent storage). |
 
 ---
 
@@ -77,3 +79,17 @@ Use this option if you want to take advantage of Vercel's Edge network for servi
 5. Under **Environment Variables**:
    - Add `VITE_API_URL` = `https://your-backend-url.onrender.com` (replace with your actual Render URL from Part 1).
 6. Click **Deploy**. Vercel will read the `vercel.json` file in the root directory to handle Single Page App routing automatically.
+
+---
+
+## Database Persistence Setup (Free Tier)
+
+To prevent data loss when Render restarts or goes to sleep, set up a free Upstash Redis database:
+
+1. Go to [Upstash](https://upstash.com/) and sign up for a free account.
+2. Create a new **Redis** database (select a region close to your Render deployment).
+3. Under the **REST API** section of your Upstash Console, copy the following details:
+   - **UPSTASH_REDIS_REST_URL**
+   - **UPSTASH_REDIS_REST_TOKEN**
+4. Add these two variables under the environment variables of your Render Web Service. The application will detect these variables and automatically shift from local file storage (`db.json`) to the free persistent Upstash cloud instance.
+
