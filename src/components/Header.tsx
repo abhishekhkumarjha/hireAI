@@ -14,6 +14,8 @@ import {
   Copy,
   CheckCircle2,
   X,
+  Camera,
+  Trash2,
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -22,8 +24,26 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
-  const { currentUser, users, setCurrentUser, logoutUser, createInvite } = usePortal();
+  const { currentUser, users, setCurrentUser, logoutUser, createInvite, updateUser } = usePortal();
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && currentUser) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        updateUser(currentUser.id, { avatar: base64String });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    if (currentUser) {
+      updateUser(currentUser.id, { avatar: '' });
+    }
+  };
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteRole, setInviteRole] = useState<'admin' | 'recruiter'>('recruiter');
   const [inviteEmail, setInviteEmail] = useState('');
@@ -152,17 +172,70 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
 
             {/* Dropdown Menu */}
             {showRoleDropdown && (
-              <div className="absolute right-0 mt-2 w-64 bg-slate-800 rounded-xl shadow-2xl border border-slate-700/80 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="pb-3 border-b border-slate-700/60 mb-2">
-                  <p className="text-xs font-bold text-slate-200">{currentUser?.name}</p>
-                  <p className="text-[10px] text-slate-400 truncate">{currentUser?.email}</p>
+              <div className="absolute right-0 mt-2 w-72 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                {/* Profile Header with custom photo upload */}
+                <div className="flex flex-col items-center pb-4 border-b border-slate-800/60 mb-3 text-center">
+                  <div className="relative group w-16 h-16 mb-2">
+                    {currentUser?.avatar ? (
+                      <img
+                        src={currentUser.avatar}
+                        alt={currentUser.name}
+                        className="w-16 h-16 rounded-full object-cover ring-2 ring-indigo-500/40"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-lg font-black text-indigo-300 ring-2 ring-indigo-500/40">
+                        {currentUser?.name?.slice(0, 2).toUpperCase() || 'US'}
+                      </div>
+                    )}
+                    
+                    {/* Camera Upload Overlay */}
+                    <label className="absolute inset-0 bg-slate-950/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-150 cursor-pointer">
+                      <Camera className="w-5 h-5 text-indigo-300" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAvatarUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  
+                  <div className="w-full">
+                    <p className="text-sm font-bold text-slate-200 truncate">{currentUser?.name}</p>
+                    <p className="text-xs text-slate-400 truncate mb-2">{currentUser?.email}</p>
+                    
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-center space-x-2">
+                      <label className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/20 cursor-pointer transition">
+                        <Camera className="w-3 h-3" />
+                        <span>Upload Photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      {currentUser?.avatar && (
+                        <button
+                          onClick={handleRemoveAvatar}
+                          className="flex items-center space-x-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 border border-rose-900/20 transition"
+                          title="Remove Photo"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
+                
+                {/* Logout Button */}
                 <button
                   onClick={() => {
                     logoutUser();
                     setShowRoleDropdown(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-lg text-xs text-rose-400 hover:bg-rose-950/20 font-bold transition"
+                  className="w-full text-center py-2 rounded-xl text-xs text-rose-400 hover:bg-rose-950/20 font-bold border border-rose-900/20 transition"
                 >
                   Log Out Account
                 </button>

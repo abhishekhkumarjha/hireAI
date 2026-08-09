@@ -73,6 +73,7 @@ interface PortalContextType {
   logoutUser: () => void;
   deleteUser: (userId: string) => boolean;
   updateOfferTemplate: (template: OfferTemplate) => void;
+  updateUser: (userId: string, updates: Partial<User>) => void;
   associateCandidateWithJob: (candidateId: string, jobId: string) => Application;
   addManualInterviewEvaluation: (appId: string, evaluation: { overallScore: number; technicalScore: number; communicationScore: number; relevanceScore: number; summary: string }) => void;
   submitAdmissionsApplication: (name: string, email: string, password?: string, profileDetails?: any, jobId?: string) => void;
@@ -1137,6 +1138,17 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     localStorage.setItem('hireai_current_user', JSON.stringify(newUser));
   };
 
+  const updateUser = (userId: string, updates: Partial<User>) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, ...updates } : u))
+    );
+    if (currentUser?.id === userId) {
+      const updatedUser = { ...currentUser, ...updates };
+      setCurrentUser(updatedUser);
+      localStorage.setItem('hireai_current_user', JSON.stringify(updatedUser));
+    }
+  };
+
   return (
     <PortalContext.Provider
       value={{
@@ -1178,6 +1190,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         logoutUser,
         deleteUser,
         updateOfferTemplate,
+        updateUser,
         associateCandidateWithJob,
         addManualInterviewEvaluation,
         submitAdmissionsApplication,
