@@ -44,6 +44,7 @@ const freeCourses = [
 export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ portalHost = 'apply' }) => {
   const {
     currentUser,
+    users,
     candidateProfiles,
     cvs,
     jobs,
@@ -126,7 +127,23 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
   const [selectedFreeCourseId, setSelectedFreeCourseId] = useState('free-2'); // Generative AI
 
   const activeBootcamp = jobs.find(j => j.id === selectedBootcampId) || jobs[0];
-  const assignedRecruiter = activeBootcamp.id === 'job_ai_bootcamp' ? 'Rahul Sharma' : 'John';
+
+  const getAssignedRecruiter = () => {
+    const poster = users.find(u => u.id === activeBootcamp?.postedBy);
+    if (poster && (poster.role === 'recruiter' || poster.role === 'admin' || poster.role === 'super_admin')) {
+      return poster;
+    }
+    const firstRecruiter = users.find(u => u.role === 'recruiter');
+    if (firstRecruiter) return firstRecruiter;
+    
+    const firstAdmin = users.find(u => u.role === 'admin' || u.role === 'super_admin');
+    if (firstAdmin) return firstAdmin;
+    
+    return { name: 'Support Admin', role: 'admin', avatar: '' };
+  };
+
+  const recruiterUser = getAssignedRecruiter();
+  const assignedRecruiter = recruiterUser.name;
 
   // Initialize values from profile
   useEffect(() => {
@@ -1483,9 +1500,17 @@ export const CandidateView: React.FC<{ portalHost?: 'apply' | 'app' }> = ({ port
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-850 shadow-md">
             <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider mb-4">Program Administration</h3>
             <div className="flex items-center space-x-3 pb-4 border-b border-slate-850">
-              <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-black text-sm">
-                AS
-              </div>
+              {recruiterUser.avatar ? (
+                <img
+                  src={recruiterUser.avatar}
+                  alt={recruiterUser.name}
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-500/40"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-black text-xs">
+                  {recruiterUser.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'AD'}
+                </div>
+              )}
               <div>
                 <h4 className="text-xs font-bold text-white">{assignedRecruiter}</h4>
                 <p className="text-[10px] text-slate-400">Assigned Cohort Course Admin</p>
