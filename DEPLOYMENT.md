@@ -18,8 +18,9 @@ Configure these variables in your deployment dashboards:
 | `PORT` | Yes (on Server) | `3000` | Port on which the Express server listens. Automatically assigned by Render. |
 | `GEMINI_API_KEY` | Optional | *None* | Your Gemini AI API Key from Google AI Studio. If omitted, the portal operates using offline fallback algorithms. |
 | `VITE_API_URL` | Yes (Vercel Frontend only) | *None* | Absolute URL of the backend API server hosted on Render (e.g., `https://your-backend.onrender.com`). |
-| `UPSTASH_REDIS_REST_URL` | Optional | *None* | The REST API URL for your Upstash Redis database (enables persistent storage). |
-| `UPSTASH_REDIS_REST_TOKEN` | Optional | *None* | The REST API read/write token for your Upstash Redis database (enables persistent storage). |
+| `MONGODB_URI` | Optional | *None* | The MongoDB connection URI string for your MongoDB Atlas cluster (enables persistent storage and takes priority). |
+| `UPSTASH_REDIS_REST_URL` | Optional | *None* | The REST API URL for your Upstash Redis database (enables persistent storage fallback). |
+| `UPSTASH_REDIS_REST_TOKEN` | Optional | *None* | The REST API read/write token for your Upstash Redis database (enables persistent storage fallback). |
 
 ---
 
@@ -83,6 +84,21 @@ Use this option if you want to take advantage of Vercel's Edge network for servi
 ---
 
 ## Database Persistence Setup (Free Tier)
+
+To prevent data loss when your deployment container restarts or sleeps, configure a persistent cloud database. You can use either **MongoDB Atlas** (recommended, takes precedence) or **Upstash Redis**.
+
+### Option 1: MongoDB Atlas (Recommended)
+
+1. Sign up for a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
+2. Create a new shared cluster (M0 Free Tier).
+3. Under **Security > Database Access**, create a database user with read/write permissions.
+4. Under **Security > Network Access**, add `0.0.0.0/0` to allow connections from Render.
+5. In your cluster dashboard, click **Connect** and select **Drivers**.
+6. Copy the connection URI string. It should look like:
+   `mongodb+srv://<username>:<password>@cluster0.mongodb.net/hire_ai?retryWrites=true&w=majority`
+7. Add this string as `MONGODB_URI` in the environment variables of your hosting dashboard. The application will detect this and automatically migrate the state.
+
+### Option 2: Upstash Redis (Fallback)
 
 To prevent data loss when Render restarts or goes to sleep, set up a free Upstash Redis database:
 

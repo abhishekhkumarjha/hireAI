@@ -4,6 +4,7 @@ import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
+import { MongoClient } from 'mongodb';
 import {
   INITIAL_USERS,
   INITIAL_CANDIDATE_PROFILES,
@@ -22,7 +23,19 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
 const DB_FILE = path.join(process.cwd(), 'db.json');
+const isMongoConfigured = !!process.env.MONGODB_URI;
 const isUpstashConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+
+let mongoClient: MongoClient | null = null;
+let mongoDb: any = null;
+
+async function connectMongo() {
+  if (!mongoClient && process.env.MONGODB_URI) {
+    mongoClient = new MongoClient(process.env.MONGODB_URI);
+    await mongoClient.connect();
+    mongoDb = mongoClient.db();
+  }
+}
 
 function getInitialDb() {
   return {
@@ -39,9 +52,25 @@ function getInitialDb() {
   };
 }
 
-// Initialize database (Upstash or local file)
+// Initialize database (MongoDB Atlas, Upstash, or local file)
 async function initDb() {
-  if (isUpstashConfigured) {
+  if (isMongoConfigured) {
+    console.log('Database Mode: MongoDB Atlas');
+    try {
+      const db = await readDb();
+      if (!db || Object.keys(db).length === 0) {
+        console.log('MongoDB Atlas database is empty, initializing with mock data...');
+        await writeDb(getInitialDb());
+      }
+    } catch (err) {
+      console.error('Failed to initialize database in MongoDB Atlas, writing initial state:', err);
+      try {
+        await writeDb(getInitialDb());
+      } catch (writeErr) {
+        console.error('Failed to write initial state to MongoDB Atlas:', writeErr);
+      }
+    }
+  } else if (isUpstashConfigured) {
     console.log('Database Mode: Upstash Redis REST API');
     try {
       const db = await readDb();
@@ -71,7 +100,21 @@ async function initDb() {
 
 // Read database
 async function readDb(): Promise<any> {
-  if (isUpstashConfigured) {
+  if (isMongoConfigured) {
+    try {
+      await connectMongo();
+      const col = mongoDb.collection('app_state');
+      const doc = await col.findOne({ _id: 'hire_ai_db_state' });
+      if (!doc) {
+        return {};
+      }
+      const { _id, ...rest } = doc;
+      return rest;
+    } catch (err) {
+      console.error('Error reading from MongoDB Atlas:', err);
+      return {};
+    }
+  } else if (isUpstashConfigured) {
     try {
       const url = `${process.env.UPSTASH_REDIS_REST_URL!.replace(/\/$/, '')}/`;
       const res = await fetch(url, {
@@ -110,7 +153,19 @@ async function readDb(): Promise<any> {
 
 // Write database
 async function writeDb(dbData: any): Promise<void> {
-  if (isUpstashConfigured) {
+  if (isMongoConfigured) {
+    try {
+      await connectMongo();
+      const col = mongoDb.collection('app_state');
+      await col.replaceOne(
+        { _id: 'hire_ai_db_state' },
+        { ...dbData, _id: 'hire_ai_db_state' },
+        { upsert: true }
+      );
+    } catch (err) {
+      console.error('Error writing to MongoDB Atlas:', err);
+    }
+  } else if (isUpstashConfigured) {
     try {
       const url = `${process.env.UPSTASH_REDIS_REST_URL!.replace(/\/$/, '')}/`;
       const res = await fetch(url, {
