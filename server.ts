@@ -31,9 +31,15 @@ let mongoDb: any = null;
 
 async function connectMongo() {
   if (!mongoClient && process.env.MONGODB_URI) {
-    mongoClient = new MongoClient(process.env.MONGODB_URI);
-    await mongoClient.connect();
-    mongoDb = mongoClient.db();
+    try {
+      mongoClient = new MongoClient(process.env.MONGODB_URI);
+      await mongoClient.connect();
+      mongoDb = mongoClient.db();
+    } catch (err) {
+      mongoClient = null;
+      mongoDb = null;
+      throw err;
+    }
   }
 }
 
@@ -103,6 +109,9 @@ async function readDb(): Promise<any> {
   if (isMongoConfigured) {
     try {
       await connectMongo();
+      if (!mongoDb) {
+        throw new Error('MongoDB connection is not established');
+      }
       const col = mongoDb.collection('app_state');
       const doc = await col.findOne({ _id: 'hire_ai_db_state' });
       if (!doc) {
@@ -156,6 +165,9 @@ async function writeDb(dbData: any): Promise<void> {
   if (isMongoConfigured) {
     try {
       await connectMongo();
+      if (!mongoDb) {
+        throw new Error('MongoDB connection is not established');
+      }
       const col = mongoDb.collection('app_state');
       await col.replaceOne(
         { _id: 'hire_ai_db_state' },
