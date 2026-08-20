@@ -2,20 +2,15 @@ import React, { useState } from 'react';
 import { usePortal } from '../context/PortalContext';
 import { UserRole } from '../types/portal';
 import {
-  Sparkles,
   Shield,
-  UserCheck,
-  Briefcase,
-  User as UserIcon,
-  ChevronDown,
-  Layers,
   Link,
-  PlusCircle,
-  Copy,
-  CheckCircle2,
-  X,
+  ChevronDown,
   Camera,
   Trash2,
+  X,
+  CheckCircle2,
+  Copy,
+  Bell
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -24,8 +19,9 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
-  const { currentUser, users, setCurrentUser, logoutUser, createInvite, updateUser } = usePortal();
+  const { currentUser, setCurrentUser, logoutUser, createInvite, updateUser, notifications } = usePortal();
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -44,37 +40,12 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
       updateUser(currentUser.id, { avatar: '' });
     }
   };
+
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteRole, setInviteRole] = useState<'admin' | 'recruiter'>('recruiter');
   const [inviteEmail, setInviteEmail] = useState('');
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
-  const getRoleBadgeColor = (role: UserRole) => {
-    switch (role) {
-      case 'super_admin':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'admin':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'recruiter':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'candidate':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
-    }
-  };
-
-  const getRoleLabel = (role: UserRole) => {
-    switch (role) {
-      case 'super_admin':
-        return 'Super Admin (Founder)';
-      case 'admin':
-        return 'Admin (HR Director)';
-      case 'recruiter':
-        return 'Recruiter';
-      case 'candidate':
-        return 'Candidate';
-    }
-  };
 
   const handleGenerateInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,30 +62,73 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const unreadNotifications = notifications.filter(n => !n.read);
+
   return (
     <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-slate-100 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
         {/* Brand Logo */}
         <div 
           onClick={onGoHome} 
           className={`flex items-center space-x-3 ${onGoHome ? 'cursor-pointer select-none hover:opacity-90 active:scale-[0.98] transition' : ''}`}
         >
-          <div className="w-10 h-10 rounded-xl overflow-hidden border border-indigo-400/30 bg-slate-950 shadow-lg shadow-indigo-500/20">
-            <img src="/cloudinntech-logo.png" alt="CloudInnTech" className="w-full h-full object-cover" />
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-sm">
+            HA
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-bold text-lg text-white tracking-tight">CloudInnTech</span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                Hire Portal
+              <span className="font-bold text-sm text-white tracking-tight">HireAI Portal</span>
+              <span className="text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                Active ATS
               </span>
             </div>
-            <p className="text-xs text-slate-400 hidden sm:block">Talent Acquisition & Hiring System</p>
           </div>
         </div>
 
         {/* Right Controls */}
         <div className="flex items-center space-x-3 sm:space-x-4">
+          
+          {/* Real-time Notification Bell Badge */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 relative transition"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadNotifications.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white font-mono text-[8px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center animate-bounce">
+                  {unreadNotifications.length}
+                </span>
+              )}
+            </button>
+
+            {/* Notifications Dropdown Panel */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
+                  <span className="text-xs font-bold text-white">System Notifications</span>
+                  <span className="text-[9px] text-slate-500 font-mono">{unreadNotifications.length} Unread</span>
+                </div>
+                <div className="max-h-[220px] overflow-y-auto space-y-2">
+                  {notifications.length === 0 ? (
+                    <div className="py-6 text-center text-slate-500 text-[10px] font-mono">No notifications resolved.</div>
+                  ) : (
+                    notifications.map(n => (
+                      <div key={n.id} className={`p-2.5 rounded-xl border text-[11px] leading-relaxed transition ${
+                        n.read ? 'bg-slate-950/40 border-slate-850 text-slate-400' : 'bg-slate-950 border-indigo-500/20 text-slate-200'
+                      }`}>
+                        <div className="font-bold text-slate-100">{n.title}</div>
+                        <p className="mt-0.5 text-slate-400">{n.message}</p>
+                        <span className="text-[9px] text-slate-500 font-mono mt-1 block">{new Date(n.createdAt).toLocaleTimeString()}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Permission Matrix Button */}
           {(currentUser?.role === 'super_admin' || currentUser?.role === 'admin') && (
             <button
@@ -173,7 +187,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
             {/* Dropdown Menu */}
             {showRoleDropdown && (
               <div className="absolute right-0 mt-2 w-72 bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 p-4 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                {/* Profile Header with custom photo upload */}
                 <div className="flex flex-col items-center pb-4 border-b border-slate-800/60 mb-3 text-center">
                   <div className="relative group w-16 h-16 mb-2">
                     {currentUser?.avatar ? (
@@ -188,7 +201,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
                       </div>
                     )}
                     
-                    {/* Camera Upload Overlay */}
                     <label className="absolute inset-0 bg-slate-950/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-150 cursor-pointer">
                       <Camera className="w-5 h-5 text-indigo-300" />
                       <input
@@ -204,7 +216,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
                     <p className="text-sm font-bold text-slate-200 truncate">{currentUser?.name}</p>
                     <p className="text-xs text-slate-400 truncate mb-2">{currentUser?.email}</p>
                     
-                    {/* Action buttons */}
                     <div className="flex items-center justify-center space-x-2">
                       <label className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/20 cursor-pointer transition">
                         <Camera className="w-3 h-3" />
@@ -229,7 +240,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenMatrix, onGoHome }) => {
                   </div>
                 </div>
                 
-                {/* Logout Button */}
                 <button
                   onClick={() => {
                     logoutUser();

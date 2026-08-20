@@ -12,10 +12,12 @@ import {
   OfferLetter,
   InviteToken,
   AISearchResult,
-  ApplicationStatus,
   ApplicationStage,
   SearchChatMessage,
   PermissionMatrixItem,
+  Notification,
+  AuditLog,
+  ApplicationEvent
 } from '../types/portal';
 import {
   INITIAL_USERS,
@@ -49,23 +51,26 @@ interface PortalContextType {
   isAiSearching: boolean;
   searchChatHistory: SearchChatMessage[];
   permissionMatrix: PermissionMatrixItem[];
+  notifications: Notification[];
+  auditLogs: AuditLog[];
+  applicationEvents: ApplicationEvent[];
 
   // Actions
   switchRole: (role: UserRole) => void;
-  createJob: (jobData: Omit<Job, 'id' | 'createdAt' | 'postedBy'>) => Job;
+  createJob: (jobData: Omit<Job, 'id' | 'createdAt' | 'postedBy' | 'updatedAt'>) => Job;
   updateJob: (job: Job) => void;
   applyForJob: (jobId: string, cvId: string) => Application;
-  updateApplicationStage: (appId: string, stage: ApplicationStage, status: ApplicationStatus, notes?: string) => void;
+  updateApplicationStage: (appId: string, stageName: ApplicationStage, notes?: string) => void;
   parseCVAndSave: (rawText: string, cvTitle: string) => Promise<CVItem>;
   addParsedCVItem: (parsedData: ParsedCVData, title: string, rawText: string) => CVItem;
   runAISearch: (query: string, isRefinement?: boolean) => Promise<void>;
   clearSearchChat: () => void;
-  scheduleScreeningCall: (appId: string, timeSlot: string) => void;
+  scheduleScreeningCall: (appId: string, date: string, time: string, duration: number, interviewer: string, type: 'ai' | 'human', meetUrl?: string, notes?: string) => void;
   startAIInterview: (appId: string) => Promise<InterviewRecord>;
   submitAIInterviewAnswers: (interviewId: string, answers: { questionId: string; answer: string }[]) => Promise<void>;
   releaseOfferLetter: (appId: string, salary: string, joiningDate: string, customNotes?: string) => Promise<OfferLetter>;
   respondToOffer: (offerId: string, response: 'accepted' | 'declined') => void;
-  createInvite: (role: 'admin' | 'recruiter', email: string) => InviteToken;
+  createInvite: (role: 'admin' | 'recruiter', email: string, invitedName?: string) => InviteToken;
   updateProfile: (profile: CandidateProfile) => void;
   loginUser: (email: string, password?: string) => boolean;
   signupCandidate: (name: string, email: string, password?: string, provider?: any) => User;
@@ -76,89 +81,28 @@ interface PortalContextType {
   updateUser: (userId: string, updates: Partial<User>) => void;
   associateCandidateWithJob: (candidateId: string, jobId: string) => Application;
   addManualInterviewEvaluation: (appId: string, evaluation: { overallScore: number; technicalScore: number; communicationScore: number; relevanceScore: number; summary: string }) => void;
-  submitAdmissionsApplication: (name: string, email: string, password?: string, profileDetails?: any, jobId?: string) => void;
+  addNotification: (userId: string, title: string, message: string, type: string) => void;
+  markNotificationsAsRead: () => void;
 }
 
 const PortalContext = createContext<PortalContextType | undefined>(undefined);
 
 export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('hireai_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
-
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('hireai_current_user');
-    return saved ? JSON.parse(saved) : null; // Defaults to null for login view
-  });
-
-  const [candidateProfiles, setCandidateProfiles] = useState<CandidateProfile[]>(() => {
-    const saved = localStorage.getItem('hireai_candidate_profiles');
-    return saved ? JSON.parse(saved) : INITIAL_CANDIDATE_PROFILES;
-  });
-
-  const [cvs, setCvs] = useState<CVItem[]>(() => {
-    const saved = localStorage.getItem('hireai_cvs');
-    return saved ? JSON.parse(saved) : INITIAL_CVS;
-  });
-
-  const [jobs, setJobs] = useState<Job[]>(() => {
-    const saved = localStorage.getItem('hireai_jobs');
-    if (!saved) return INITIAL_JOBS;
-    const savedJobs: Job[] = JSON.parse(saved);
-    const savedById = new Map(savedJobs.map((job) => [job.id, job]));
-    const mergedInitialJobs = INITIAL_JOBS.map((job) => {
-      const savedJob = savedById.get(job.id);
-      const isCourse = job.id.includes('bootcamp');
-      return {
-        ...job,
-        ...savedJob,
-        // The supplied country-wise price schedule is authoritative for every master's course.
-        ...(isCourse ? {
-          salaryRange: job.salaryRange,
-          courseInfo: job.courseInfo ? {
-            ...job.courseInfo,
-            ...savedJob?.courseInfo,
-            regionalPricing: job.courseInfo.regionalPricing,
-          } : savedJob?.courseInfo,
-        } : {}),
-      };
-    });
-    const customJobs = savedJobs.filter((job) => !INITIAL_JOBS.some((initialJob) => initialJob.id === job.id));
-    // Preserve administrator changes while adding newly published master programs
-    // and their structured PDF-derived course information to existing portals.
-    return [...mergedInitialJobs, ...customJobs];
-  });
-
-  const [applications, setApplications] = useState<Application[]>(() => {
-    const saved = localStorage.getItem('hireai_applications');
-    return saved ? JSON.parse(saved) : INITIAL_APPLICATIONS;
-  });
-
-  const [interviews, setInterviews] = useState<InterviewRecord[]>(() => {
-    const saved = localStorage.getItem('hireai_interviews');
-    return saved ? JSON.parse(saved) : INITIAL_INTERVIEWS;
-  });
-
-  const [offerTemplates, setOfferTemplates] = useState<OfferTemplate[]>(() => {
-    const saved = localStorage.getItem('hireai_offer_templates');
-    return saved ? JSON.parse(saved) : INITIAL_OFFER_TEMPLATES;
-  });
-
-  const [offerLetters, setOfferLetters] = useState<OfferLetter[]>(() => {
-    const saved = localStorage.getItem('hireai_offer_letters');
-    return saved ? JSON.parse(saved) : INITIAL_OFFER_LETTERS;
-  });
-
-  const [invites, setInvites] = useState<InviteToken[]>(() => {
-    const saved = localStorage.getItem('hireai_invites');
-    return saved ? JSON.parse(saved) : INITIAL_INVITE_TOKENS;
-  });
-
-  const [searchChatHistory, setSearchChatHistory] = useState<SearchChatMessage[]>(() => {
-    const saved = localStorage.getItem('hireai_search_chat_history');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [candidateProfiles, setCandidateProfiles] = useState<CandidateProfile[]>(INITIAL_CANDIDATE_PROFILES);
+  const [cvs, setCvs] = useState<CVItem[]>(INITIAL_CVS);
+  const [jobs, setJobs] = useState<Job[]>(INITIAL_JOBS);
+  const [applications, setApplications] = useState<Application[]>(INITIAL_APPLICATIONS);
+  const [interviews, setInterviews] = useState<InterviewRecord[]>(INITIAL_INTERVIEWS);
+  const [offerTemplates, setOfferTemplates] = useState<OfferTemplate[]>(INITIAL_OFFER_TEMPLATES);
+  const [offerLetters, setOfferLetters] = useState<OfferLetter[]>(INITIAL_OFFER_LETTERS);
+  const [invites, setInvites] = useState<InviteToken[]>(INITIAL_INVITE_TOKENS);
+  const [searchChatHistory, setSearchChatHistory] = useState<SearchChatMessage[]>([]);
+  
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [applicationEvents, setApplicationEvents] = useState<ApplicationEvent[]>([]);
 
   const [aiSearchResults, setAiSearchResults] = useState<{ [candidateId: string]: AISearchResult } | null>(null);
   const [aiSearchCriteria, setAiSearchCriteria] = useState<any | null>(null);
@@ -231,6 +175,9 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setSearchChatHistory(db.searchChatHistory);
             lastSyncedRefs.current['searchChatHistory'] = JSON.stringify(db.searchChatHistory);
           }
+          if (db.notifications) setNotifications(db.notifications);
+          if (db.auditLogs) setAuditLogs(db.auditLogs);
+          if (db.applicationEvents) setApplicationEvents(db.applicationEvents);
         }
       } catch (err) {
         console.error('Failed to fetch initial database from backend:', err);
@@ -239,98 +186,20 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fetchDb();
   }, []);
 
-  // Sync to localStorage and Remote DB
-  useEffect(() => { 
-    localStorage.setItem('hireai_users', JSON.stringify(users)); 
-    syncCollection('users', users);
-  }, [users]);
-
-  useEffect(() => { 
-    if (currentUser) {
-      localStorage.setItem('hireai_current_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('hireai_current_user');
-    }
-  }, [currentUser]);
-
-  useEffect(() => { 
-    localStorage.setItem('hireai_candidate_profiles', JSON.stringify(candidateProfiles)); 
-    syncCollection('candidateProfiles', candidateProfiles);
-  }, [candidateProfiles]);
-
-  useEffect(() => { 
-    localStorage.setItem('hireai_cvs', JSON.stringify(cvs)); 
-    syncCollection('cvs', cvs);
-  }, [cvs]);
-
-  useEffect(() => { 
-    localStorage.setItem('hireai_jobs', JSON.stringify(jobs)); 
-    syncCollection('jobs', jobs);
-  }, [jobs]);
-
-  useEffect(() => { 
-    localStorage.setItem('hireai_applications', JSON.stringify(applications)); 
-    syncCollection('applications', applications);
-  }, [applications]);
-
-  useEffect(() => { 
-    localStorage.setItem('hireai_interviews', JSON.stringify(interviews)); 
-    syncCollection('interviews', interviews);
-  }, [interviews]);
-
-  useEffect(() => { 
-    localStorage.setItem('hireai_offer_templates', JSON.stringify(offerTemplates)); 
-    syncCollection('offerTemplates', offerTemplates);
-  }, [offerTemplates]);
-
-  useEffect(() => { 
-    localStorage.setItem('hireai_offer_letters', JSON.stringify(offerLetters)); 
-    syncCollection('offerLetters', offerLetters);
-  }, [offerLetters]);
-
-  useEffect(() => { 
-    localStorage.setItem('hireai_invites', JSON.stringify(invites)); 
-    syncCollection('invites', invites);
-  }, [invites]);
-
-  useEffect(() => { 
-    localStorage.setItem('hireai_search_chat_history', JSON.stringify(searchChatHistory)); 
-    syncCollection('searchChatHistory', searchChatHistory);
-  }, [searchChatHistory]);
-
-  // Clean old mock data if present to ensure 1 admin and fresh signup states
-  useEffect(() => {
-    const raw = localStorage.getItem('hireai_users');
-    if (raw && !raw.includes('abhishek.jha@cloudinntech.co.in')) {
-      localStorage.clear();
-      window.location.reload();
-    }
-  }, []);
-
-  // Real-time synchronization listener across browser tabs/portals
-  useEffect(() => {
-    const handleStorageSync = (e: StorageEvent) => {
-      if (!e.newValue) return;
-      try {
-        const parsed = JSON.parse(e.newValue);
-        if (e.key === 'hireai_users') setUsers(parsed);
-        if (e.key === 'hireai_candidate_profiles') setCandidateProfiles(parsed);
-        if (e.key === 'hireai_cvs') setCvs(parsed);
-        if (e.key === 'hireai_jobs') setJobs(parsed);
-        if (e.key === 'hireai_applications') setApplications(parsed);
-        if (e.key === 'hireai_interviews') setInterviews(parsed);
-        if (e.key === 'hireai_offer_templates') setOfferTemplates(parsed);
-        if (e.key === 'hireai_offer_letters') setOfferLetters(parsed);
-        if (e.key === 'hireai_invites') setInvites(parsed);
-        if (e.key === 'hireai_search_chat_history') setSearchChatHistory(parsed);
-        if (e.key === 'hireai_current_user') setCurrentUser(parsed);
-      } catch (err) {
-        console.error('Error syncing storage key', e.key, err);
-      }
-    };
-    window.addEventListener('storage', handleStorageSync);
-    return () => window.removeEventListener('storage', handleStorageSync);
-  }, []);
+  // Sync to Remote DB on update
+  useEffect(() => { syncCollection('users', users); }, [users]);
+  useEffect(() => { syncCollection('candidateProfiles', candidateProfiles); }, [candidateProfiles]);
+  useEffect(() => { syncCollection('cvs', cvs); }, [cvs]);
+  useEffect(() => { syncCollection('jobs', jobs); }, [jobs]);
+  useEffect(() => { syncCollection('applications', applications); }, [applications]);
+  useEffect(() => { syncCollection('interviews', interviews); }, [interviews]);
+  useEffect(() => { syncCollection('offerTemplates', offerTemplates); }, [offerTemplates]);
+  useEffect(() => { syncCollection('offerLetters', offerLetters); }, [offerLetters]);
+  useEffect(() => { syncCollection('invites', invites); }, [invites]);
+  useEffect(() => { syncCollection('searchChatHistory', searchChatHistory); }, [searchChatHistory]);
+  useEffect(() => { syncCollection('notifications', notifications); }, [notifications]);
+  useEffect(() => { syncCollection('auditLogs', auditLogs); }, [auditLogs]);
+  useEffect(() => { syncCollection('applicationEvents', applicationEvents); }, [applicationEvents]);
 
   // Polling mechanism for cross-portal/cross-domain remote database sync
   useEffect(() => {
@@ -340,132 +209,124 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const result = await res.json();
         if (result.success && result.db) {
           const db = result.db;
-          
-          if (db.users) {
-            const dataStr = JSON.stringify(db.users);
-            if (dataStr !== JSON.stringify(users)) {
-              setUsers(db.users);
-              lastSyncedRefs.current['users'] = dataStr;
-            }
-          }
-          if (db.candidateProfiles) {
-            const dataStr = JSON.stringify(db.candidateProfiles);
-            if (dataStr !== JSON.stringify(candidateProfiles)) {
-              setCandidateProfiles(db.candidateProfiles);
-              lastSyncedRefs.current['candidateProfiles'] = dataStr;
-            }
-          }
-          if (db.cvs) {
-            const dataStr = JSON.stringify(db.cvs);
-            if (dataStr !== JSON.stringify(cvs)) {
-              setCvs(db.cvs);
-              lastSyncedRefs.current['cvs'] = dataStr;
-            }
-          }
-          if (db.jobs) {
-            const dataStr = JSON.stringify(db.jobs);
-            if (dataStr !== JSON.stringify(jobs)) {
-              setJobs(db.jobs);
-              lastSyncedRefs.current['jobs'] = dataStr;
-            }
-          }
-          if (db.applications) {
-            const dataStr = JSON.stringify(db.applications);
-            if (dataStr !== JSON.stringify(applications)) {
-              setApplications(db.applications);
-              lastSyncedRefs.current['applications'] = dataStr;
-            }
-          }
-          if (db.interviews) {
-            const dataStr = JSON.stringify(db.interviews);
-            if (dataStr !== JSON.stringify(interviews)) {
-              setInterviews(db.interviews);
-              lastSyncedRefs.current['interviews'] = dataStr;
-            }
-          }
-          if (db.offerTemplates) {
-            const dataStr = JSON.stringify(db.offerTemplates);
-            if (dataStr !== JSON.stringify(offerTemplates)) {
-              setOfferTemplates(db.offerTemplates);
-              lastSyncedRefs.current['offerTemplates'] = dataStr;
-            }
-          }
-          if (db.offerLetters) {
-            const dataStr = JSON.stringify(db.offerLetters);
-            if (dataStr !== JSON.stringify(offerLetters)) {
-              setOfferLetters(db.offerLetters);
-              lastSyncedRefs.current['offerLetters'] = dataStr;
-            }
-          }
-          if (db.invites) {
-            const dataStr = JSON.stringify(db.invites);
-            if (dataStr !== JSON.stringify(invites)) {
-              setInvites(db.invites);
-              lastSyncedRefs.current['invites'] = dataStr;
-            }
-          }
-          if (db.searchChatHistory) {
-            const dataStr = JSON.stringify(db.searchChatHistory);
-            if (dataStr !== JSON.stringify(searchChatHistory)) {
-              setSearchChatHistory(db.searchChatHistory);
-              lastSyncedRefs.current['searchChatHistory'] = dataStr;
-            }
-          }
+          if (db.users && JSON.stringify(db.users) !== JSON.stringify(users)) setUsers(db.users);
+          if (db.candidateProfiles && JSON.stringify(db.candidateProfiles) !== JSON.stringify(candidateProfiles)) setCandidateProfiles(db.candidateProfiles);
+          if (db.cvs && JSON.stringify(db.cvs) !== JSON.stringify(cvs)) setCvs(db.cvs);
+          if (db.jobs && JSON.stringify(db.jobs) !== JSON.stringify(jobs)) setJobs(db.jobs);
+          if (db.applications && JSON.stringify(db.applications) !== JSON.stringify(applications)) setApplications(db.applications);
+          if (db.interviews && JSON.stringify(db.interviews) !== JSON.stringify(interviews)) setInterviews(db.interviews);
+          if (db.offerTemplates && JSON.stringify(db.offerTemplates) !== JSON.stringify(offerTemplates)) setOfferTemplates(db.offerTemplates);
+          if (db.offerLetters && JSON.stringify(db.offerLetters) !== JSON.stringify(offerLetters)) setOfferLetters(db.offerLetters);
+          if (db.invites && JSON.stringify(db.invites) !== JSON.stringify(invites)) setInvites(db.invites);
+          if (db.searchChatHistory && JSON.stringify(db.searchChatHistory) !== JSON.stringify(searchChatHistory)) setSearchChatHistory(db.searchChatHistory);
+          if (db.notifications && JSON.stringify(db.notifications) !== JSON.stringify(notifications)) setNotifications(db.notifications);
+          if (db.auditLogs && JSON.stringify(db.auditLogs) !== JSON.stringify(auditLogs)) setAuditLogs(db.auditLogs);
+          if (db.applicationEvents && JSON.stringify(db.applicationEvents) !== JSON.stringify(applicationEvents)) setApplicationEvents(db.applicationEvents);
         }
       } catch (err) {
         console.error('Failed to sync-poll from remote database:', err);
       }
-    }, 5000); // Poll every 5 seconds for backend updates
+    }, 4000);
 
     return () => clearInterval(pollInterval);
-  }, [users, candidateProfiles, cvs, jobs, applications, interviews, offerTemplates, offerLetters, invites, searchChatHistory]);
+  }, [users, candidateProfiles, cvs, jobs, applications, interviews, offerTemplates, offerLetters, invites, searchChatHistory, notifications, auditLogs, applicationEvents]);
+
+  // Log auditing
+  const logAudit = (action: string, details?: string) => {
+    if (!currentUser) return;
+    const newLog: AuditLog = {
+      id: `audit_${Date.now()}`,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      actorRole: currentUser.role,
+      action,
+      details,
+      createdAt: new Date().toISOString()
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+  };
+
+  // Log application events
+  const addApplicationEvent = (appId: string, eventType: string, message: string, prev?: ApplicationStage, next?: ApplicationStage) => {
+    if (!currentUser) return;
+    const newEvent: ApplicationEvent = {
+      id: `evt_${Date.now()}`,
+      applicationId: appId,
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      actorRole: currentUser.role,
+      eventType,
+      previousStatus: prev,
+      newStatus: next,
+      message,
+      createdAt: new Date().toISOString()
+    };
+    setApplicationEvents(prevList => [...prevList, newEvent]);
+  };
+
+  const addNotification = (userId: string, title: string, message: string, type: string) => {
+    const newNotif: Notification = {
+      id: `notif_${Date.now()}`,
+      userId,
+      title,
+      message,
+      type,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+  };
+
+  const markNotificationsAsRead = () => {
+    if (!currentUser) return;
+    setNotifications(prev => prev.map(n => n.userId === currentUser.id ? { ...n, read: true } : n));
+  };
 
   const switchRole = (role: UserRole) => {
     const found = users.find((u) => u.role === role);
     if (found) {
       setCurrentUser(found);
+      logAudit(`Switched view mode to ${role}`);
     }
   };
 
   const loginUser = (email: string, password?: string): boolean => {
-    if (!password || password.length < 6) {
-      return false;
-    }
+    if (!password || password.length < 6) return false;
     const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (found) {
-      if (found.password && found.password !== password) {
-        return false;
-      }
+      if (found.password && found.password !== password) return false;
       setCurrentUser(found);
+      // Generate standard notification
+      addNotification(found.id, 'Secure Login Verified', 'You have logged into the CloudInnTech ATS environment successfully.', 'info');
+      
+      const newLog: AuditLog = {
+        id: `audit_${Date.now()}`,
+        actorId: found.id,
+        actorName: found.name,
+        actorRole: found.role,
+        action: 'Login Successful',
+        createdAt: new Date().toISOString()
+      };
+      setAuditLogs(prev => [newLog, ...prev]);
       return true;
     }
     return false;
   };
 
   const logoutUser = () => {
+    if (currentUser) {
+      logAudit('Logout Successful');
+    }
     setCurrentUser(null);
   };
 
   const deleteUser = (userId: string): boolean => {
     if (currentUser?.role !== 'super_admin' || userId === currentUser.id) return false;
     const target = users.find((user) => user.id === userId);
-    // Super-admin accounts are protected to avoid removing the platform authority.
     if (!target || target.role === 'super_admin') return false;
 
     setUsers((prev) => prev.filter((user) => user.id !== userId));
-
-    if (target.role === 'candidate') {
-      setCandidateProfiles((prev) => prev.filter((profile) => profile.userId !== userId));
-      setCvs((prev) => prev.filter((cv) => cv.candidateId !== userId));
-      setApplications((prev) => prev.filter((application) => application.candidateId !== userId));
-      setInterviews((prev) => prev.filter((interview) => interview.candidateId !== userId));
-      setOfferLetters((prev) => prev.filter((offer) => offer.candidateId !== userId));
-    } else {
-      // Keep organisational records available, but transfer listings to Super Admin ownership.
-      setJobs((prev) => prev.map((job) => job.postedBy === userId ? { ...job, postedBy: currentUser.id } : job));
-    }
-
-    setInvites((prev) => prev.filter((invite) => invite.email.toLowerCase() !== target.email.toLowerCase()));
+    logAudit('User Account Terminated', `Account email: ${target.email}`);
     return true;
   };
 
@@ -504,12 +365,18 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       skills: [],
       experience: [],
       education: [],
-      certifications: []
+      certifications: [],
+      profileCompletion: 25,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
     setUsers(prev => [...prev, newUser]);
     setCandidateProfiles(prev => [...prev, newProfile]);
     setCurrentUser(newUser);
+
+    // Initial event and notification
+    addNotification(newUser.id, 'Welcome to HireAI', 'Complete your technical profile and upload a resume to match with open roles.', 'info');
     return newUser;
   };
 
@@ -521,7 +388,6 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (inviteIdx === -1) return null;
     
     const invite = invites[inviteIdx];
-    
     setInvites(prev => prev.map((inv, idx) => idx === inviteIdx ? { ...inv, status: 'accepted' } : inv));
     
     const newUser: User = {
@@ -545,13 +411,10 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updateOfferTemplate = (updated: OfferTemplate) => {
     setOfferTemplates(prev => prev.map(t => t.id === updated.id ? updated : t));
+    logAudit('Updated Employment Offer Template', updated.name);
   };
 
-  const clearSearchChat = () => {
-    setSearchChatHistory([]);
-  };
-
-  const createJob = (jobData: Omit<Job, 'id' | 'createdAt' | 'postedBy'>): Job => {
+  const createJob = (jobData: Omit<Job, 'id' | 'createdAt' | 'postedBy' | 'updatedAt'>): Job => {
     if (!currentUser || currentUser.role === 'candidate') {
       throw new Error('Only administrators and recruiters can create listings.');
     }
@@ -559,28 +422,26 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ...jobData,
       id: `job_${Date.now()}`,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       postedBy: currentUser?.id || 'usr_super_admin',
     };
     setJobs((prev) => [newJob, ...prev]);
+    logAudit('Created Job Opening', newJob.title);
     return newJob;
   };
 
   const updateJob = (updated: Job) => {
-    const existing = jobs.find((job) => job.id === updated.id);
-    if (!existing || !currentUser) return;
-    const isCourse = existing.id.includes('bootcamp');
-    const canEdit = currentUser.role === 'super_admin'
-      || (currentUser.role === 'admin' && isCourse)
-      || (currentUser.role === 'recruiter' && !isCourse && existing.postedBy === currentUser.id);
-    if (!canEdit) return;
-    setJobs((prev) => prev.map((j) => (j.id === updated.id ? updated : j)));
+    setJobs((prev) => prev.map((j) => (j.id === updated.id ? { ...updated, updatedAt: new Date().toISOString() } : j)));
+    logAudit('Updated Job Opening Details', updated.title);
   };
 
   const updateProfile = (updated: CandidateProfile) => {
-    setCandidateProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setCandidateProfiles((prev) => prev.map((p) => (p.id === updated.id ? { ...updated, updatedAt: new Date().toISOString() } : p)));
+    logAudit('Updated Candidate Technical Profile');
   };
 
   const applyForJob = (jobId: string, cvId: string): Application => {
+    const job = jobs.find(j => j.id === jobId);
     const newApp: Application = {
       id: `app_${Date.now()}`,
       jobId,
@@ -590,14 +451,25 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       stage: 1,
       interviewType: 'ai',
       appliedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     setApplications((prev) => [newApp, ...prev]);
+    
+    // Add timeline event
+    addApplicationEvent(newApp.id, 'applied', `Candidate submitted application for job role: ${job?.title || 'Unknown'}`);
+    
+    // Notify recruiter
+    const recId = job?.postedBy || 'usr_super_admin';
+    addNotification(recId, 'New Candidate Application', `${currentUser?.name || 'A candidate'} applied for ${job?.title || 'Job Opening'}.`, 'success');
     return newApp;
   };
 
   const associateCandidateWithJob = (candidateId: string, jobId: string): Application => {
     const candidateCvs = cvs.filter(c => c.candidateId === candidateId);
     const primaryCv = candidateCvs.find(c => c.isPrimary) || candidateCvs[0];
+    const job = jobs.find(j => j.id === jobId);
+    const candidateUser = users.find(u => u.id === candidateId);
+    
     const newApp: Application = {
       id: `app_${Date.now()}`,
       jobId,
@@ -607,63 +479,37 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       stage: 1,
       interviewType: 'ai',
       appliedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     setApplications((prev) => [newApp, ...prev]);
+    
+    addApplicationEvent(newApp.id, 'applied', `Candidate was associated to job role: ${job?.title || 'Unknown'}`);
+    addNotification(candidateId, 'Associated with Role', `A recruiter has added you as a candidate for the position: ${job?.title}.`, 'info');
     return newApp;
   };
 
-  const addManualInterviewEvaluation = (appId: string, evaluation: { overallScore: number; technicalScore: number; communicationScore: number; relevanceScore: number; summary: string }) => {
-    const app = applications.find(a => a.id === appId);
-    if (!app) return;
-    
-    const newRecord: InterviewRecord = {
-      id: `int_${Date.now()}`,
-      applicationId: appId,
-      jobId: app.jobId,
-      candidateId: app.candidateId,
-      type: 'human',
-      scheduledAt: new Date().toISOString(),
-      status: 'completed',
-      completedAt: new Date().toISOString(),
-      overallScore: evaluation.overallScore,
-      technicalScore: evaluation.technicalScore,
-      communicationScore: evaluation.communicationScore,
-      relevanceScore: evaluation.relevanceScore,
-      summary: evaluation.summary,
-      questions: []
-    };
-    
-    setInterviews(prev => [newRecord, ...prev.filter(i => i.applicationId !== appId)]);
-    updateApplicationStage(appId, 3, 'selected', 'Human interview completed and graded.');
-  };
-
-  const updateApplicationStage = (
-    appId: string,
-    stage: ApplicationStage,
-    status: ApplicationStatus,
-    notes?: string
-  ) => {
+  const updateApplicationStage = (appId: string, stageName: ApplicationStage, notes?: string) => {
     const target = applications.find((application) => application.id === appId);
-    const targetJob = target && jobs.find((job) => job.id === target.jobId);
-    if (!target || !targetJob || !currentUser) return;
-    const isCourse = targetJob.id.includes('bootcamp');
-    const canUpdate = currentUser.role === 'super_admin'
-      || (currentUser.role === 'admin' && isCourse)
-      || (currentUser.role === 'recruiter' && !isCourse && targetJob.postedBy === currentUser.id)
-      || (currentUser.role === 'candidate' && target.candidateId === currentUser.id);
-    if (!canUpdate) return;
+    if (!target) return;
+    
+    const prevStatus = target.status;
     setApplications((prev) =>
       prev.map((app) =>
         app.id === appId
           ? {
               ...app,
-              stage,
-              status,
-              notes: notes || app.notes,
+              status: stageName,
+              recruiterNotes: notes || app.recruiterNotes,
+              updatedAt: new Date().toISOString(),
             }
           : app
       )
     );
+    
+    addApplicationEvent(appId, stageName, `Application status updated to ${stageName.replace('_', ' ')}. ${notes || ''}`, prevStatus, stageName);
+    
+    // Send Candidate Notification
+    addNotification(target.candidateId, 'Application Update', `Your application status has been moved to ${stageName.replace('_', ' ')}.`, 'info');
   };
 
   const parseCVAndSave = async (rawText: string, cvTitle: string): Promise<CVItem> => {
@@ -686,32 +532,37 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       isPrimary: true,
       rawText,
       parsedData,
+      uploadedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    setCvs((prev) => [newCv, ...prev]);
+    setCvs((prev) => [newCv, ...prev].map(c => c.id === newCv.id ? c : { ...c, isPrimary: false }));
 
-    // Update profile if candidate
-    setCandidateProfiles((prev) => {
-      const existing = prev.find((p) => p.userId === currentUser?.id);
-      if (existing) {
-        return prev.map((p) =>
-          p.userId === currentUser?.id
-            ? {
-                ...p,
-                skills: Array.from(new Set([...p.skills, ...(parsedData.skills || [])])),
-                experienceYears: parsedData.experienceYears || p.experienceYears,
-                expectedSalary: parsedData.expectedSalary || p.expectedSalary,
-                experience: parsedData.experience?.length ? parsedData.experience : p.experience,
-                education: parsedData.education?.length ? parsedData.education : p.education,
-                primaryCvId: newCv.id,
-              }
-            : p
-        );
-      }
-      return prev;
-    });
+    // Update candidate profile
+    setCandidateProfiles((prev) =>
+      prev.map((p) =>
+        p.userId === currentUser?.id
+          ? {
+              ...p,
+              fullName: parsedData.fullName || p.fullName,
+              email: parsedData.email || p.email,
+              phone: parsedData.phone || p.phone,
+              location: parsedData.location || p.location,
+              bio: parsedData.summary || p.bio,
+              skills: Array.from(new Set([...p.skills, ...(parsedData.skills || [])])),
+              experienceYears: parsedData.experienceYears || p.experienceYears,
+              expectedSalary: parsedData.expectedSalary || p.expectedSalary,
+              experience: parsedData.experience?.length ? parsedData.experience : p.experience,
+              education: parsedData.education?.length ? parsedData.education : p.education,
+              certifications: parsedData.certifications?.length ? parsedData.certifications : p.certifications,
+              primaryCvId: newCv.id,
+              profileCompletion: 80,
+            }
+          : p
+      )
+    );
 
+    logAudit('Uploaded Candidate Resume', newCv.title);
     return newCv;
   };
 
@@ -723,37 +574,34 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       isPrimary: true,
       rawText,
       parsedData,
+      uploadedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     setCvs((prev) => [newCv, ...prev].map(c => c.id === newCv.id ? c : { ...c, isPrimary: false }));
 
-    setCandidateProfiles((prev) => {
-      const existing = prev.find((p) => p.userId === currentUser?.id);
-      if (existing) {
-        return prev.map((p) =>
-          p.userId === currentUser?.id
-            ? {
-                ...p,
-                fullName: parsedData.fullName || p.fullName,
-                email: parsedData.email || p.email,
-                phone: parsedData.phone || p.phone,
-                location: parsedData.location || p.location,
-                bio: parsedData.summary || p.bio,
-                skills: Array.from(new Set([...p.skills, ...(parsedData.skills || [])])),
-                experienceYears: parsedData.experienceYears || p.experienceYears,
-                expectedSalary: parsedData.expectedSalary || p.expectedSalary,
-                availability: (parsedData.availability as any) || p.availability,
-                experience: parsedData.experience?.length ? parsedData.experience : p.experience,
-                education: parsedData.education?.length ? parsedData.education : p.education,
-                certifications: parsedData.certifications?.length ? parsedData.certifications : p.certifications,
-                primaryCvId: newCv.id,
-              }
-            : p
-        );
-      }
-      return prev;
-    });
+    setCandidateProfiles((prev) =>
+      prev.map((p) =>
+        p.userId === currentUser?.id
+          ? {
+              ...p,
+              fullName: parsedData.fullName || p.fullName,
+              email: parsedData.email || p.email,
+              phone: parsedData.phone || p.phone,
+              location: parsedData.location || p.location,
+              bio: parsedData.summary || p.bio,
+              skills: Array.from(new Set([...p.skills, ...(parsedData.skills || [])])),
+              experienceYears: parsedData.experienceYears || p.experienceYears,
+              expectedSalary: parsedData.expectedSalary || p.expectedSalary,
+              experience: parsedData.experience?.length ? parsedData.experience : p.experience,
+              education: parsedData.education?.length ? parsedData.education : p.education,
+              certifications: parsedData.certifications?.length ? parsedData.certifications : p.certifications,
+              primaryCvId: newCv.id,
+              profileCompletion: 85,
+            }
+          : p
+      )
+    );
 
     return newCv;
   };
@@ -820,11 +668,44 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const scheduleScreeningCall = (appId: string, timeSlot: string) => {
-    updateApplicationStage(appId, 1, 'screening_scheduled', `Screening call scheduled for ${timeSlot}`);
-    setApplications((prev) =>
-      prev.map((a) => (a.id === appId ? { ...a, screeningSlot: timeSlot } : a))
-    );
+  const scheduleScreeningCall = (
+    appId: string,
+    date: string,
+    time: string,
+    duration: number,
+    interviewer: string,
+    type: 'ai' | 'human',
+    meetUrl?: string,
+    notes?: string
+  ) => {
+    const app = applications.find(a => a.id === appId);
+    if (!app) return;
+
+    const slotText = `${date} at ${time} (${duration} mins) with ${interviewer}`;
+    
+    // Create actual scheduled human/AI interview record
+    const newRecord: InterviewRecord = {
+      id: `int_${Date.now()}`,
+      applicationId: appId,
+      jobId: app.jobId,
+      candidateId: app.candidateId,
+      type,
+      scheduledAt: `${date}T${time}:00`,
+      duration,
+      status: 'scheduled',
+      interviewerIds: [interviewer],
+      videoCallUrl: meetUrl || 'https://meet.google.com/abc-defg-hij',
+      questions: []
+    };
+
+    setInterviews(prev => [newRecord, ...prev]);
+
+    updateApplicationStage(appId, type === 'ai' ? 'ai_screening' : 'recruiter_screening', `Scheduled screening interview. details: ${slotText}. Notes: ${notes || ''}`);
+    
+    // Add visual screening slot string
+    setApplications(prev => prev.map(a => a.id === appId ? { ...a, screeningSlot: slotText } : a));
+
+    addNotification(app.candidateId, 'Interview Scheduled', `Your interview has been scheduled for ${slotText}. Meeting Link: ${newRecord.videoCallUrl}`, 'info');
   };
 
   const startAIInterview = async (appId: string): Promise<InterviewRecord> => {
@@ -858,7 +739,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     setInterviews((prev) => [newInterview, ...prev]);
-    updateApplicationStage(appId, 2, 'interviewing', 'Candidate entered AI Interview room');
+    updateApplicationStage(appId, 'ai_screening', 'Candidate entered automated AI Interview portal.');
     return newInterview;
   };
 
@@ -907,10 +788,10 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               status: 'completed',
               completedAt: new Date().toISOString(),
               questions: updatedQuestions,
-              overallScore: evaluation.overallScore || 85,
-              technicalScore: evaluation.technicalScore || 85,
-              communicationScore: evaluation.communicationScore || 85,
-              relevanceScore: evaluation.relevanceScore || 85,
+              overallScore: evaluation.overallScore || 80,
+              technicalScore: evaluation.technicalScore || 80,
+              communicationScore: evaluation.communicationScore || 80,
+              relevanceScore: evaluation.relevanceScore || 80,
               summary: evaluation.summary || 'Solid candidate performance.',
             }
           : i
@@ -919,9 +800,8 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     updateApplicationStage(
       int.applicationId,
-      3,
-      'selected',
-      `Completed AI Interview with Score ${evaluation.overallScore || 85}%`
+      'under_review',
+      `Completed AI interview with score of ${evaluation.overallScore || 80}%.`
     );
   };
 
@@ -934,7 +814,6 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const app = applications.find((a) => a.id === appId);
     const job = jobs.find((j) => j.id === app?.jobId);
     const profile = candidateProfiles.find((p) => p.userId === app?.candidateId);
-
     const template = offerTemplates[0];
 
     const res = await fetch(`${API_BASE}/api/offer-letter/generate`, {
@@ -972,7 +851,8 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     setOfferLetters((prev) => [newOffer, ...prev]);
-    updateApplicationStage(appId, 4, 'offer_sent', `Offer letter sent for ${salary}`);
+    updateApplicationStage(appId, 'offer_sent', `Employment offer generated and sent.`);
+    addNotification(profile!.userId, 'Employment Offer Released', `Congratulations! CloudInnTech has extended an employment offer for the ${job?.title} role.`, 'success');
     return newOffer;
   };
 
@@ -984,6 +864,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               ...o,
               status: response,
               respondedAt: new Date().toISOString(),
+              candidateResponse: `Signed and marked as ${response}.`
             }
           : o
       )
@@ -993,30 +874,16 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (offer) {
       updateApplicationStage(
         offer.applicationId,
-        4,
         response === 'accepted' ? 'offer_accepted' : 'offer_declined',
-        `Candidate ${response} the offer letter.`
+        `Candidate marked offer response as ${response}.`
       );
+      
       if (response === 'accepted') {
-        // Keep user role as 'candidate' and upgrade enrollmentStatus in profiles
-        setCandidateProfiles((prev) =>
-          prev.map((p) =>
-            p.userId === offer.candidateId
-              ? {
-                  ...p,
-                  enrollmentStatus: 'student',
-                  applicationProgress: 100,
-                  bio: (p.bio || '') + `\n\nStudent ID: STU-2026-X${offer.candidateId.slice(-4).toUpperCase()}`
-                }
-              : p
-          )
-        );
-        // Sync current user state if they are the one accepting (role remains 'candidate')
-        if (currentUser && currentUser.id === offer.candidateId) {
-          const updatedUser = { ...currentUser };
-          setCurrentUser(updatedUser);
-          localStorage.setItem('hireai_current_user', JSON.stringify(updatedUser));
-        }
+        updateApplicationStage(offer.applicationId, 'hired', 'Offer accepted. Onboarding sequence initialized.');
+        
+        // Upgrade recruiter view
+        const job = jobs.find(j => j.id === offer.jobId);
+        addNotification(job?.postedBy || 'usr_super_admin', 'Offer Accepted!', `${offer.candidateName} accepted the offer for the ${offer.role} role.`, 'success');
       }
     }
   };
@@ -1025,7 +892,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const newInvite: InviteToken = {
       id: `inv_${Date.now()}`,
       invitedBy: currentUser?.id || 'usr_super_admin',
-      invitedByName: invitedName || currentUser?.name || 'Alex Vance',
+      invitedByName: invitedName || currentUser?.name || 'Super Admin',
       role,
       email,
       token: `inv_token_${role}_${Math.floor(1000 + Math.random() * 9000)}`,
@@ -1035,7 +902,34 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     setInvites((prev) => [newInvite, ...prev]);
+    logAudit('Generated onboarding invitation link', `${role} role for ${email}`);
     return newInvite;
+  };
+
+  const addManualInterviewEvaluation = (appId: string, evaluation: { overallScore: number; technicalScore: number; communicationScore: number; relevanceScore: number; summary: string }) => {
+    const app = applications.find(a => a.id === appId);
+    if (!app) return;
+    
+    const newRecord: InterviewRecord = {
+      id: `int_${Date.now()}`,
+      applicationId: appId,
+      jobId: app.jobId,
+      candidateId: app.candidateId,
+      type: 'human',
+      scheduledAt: new Date().toISOString(),
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      overallScore: evaluation.overallScore,
+      technicalScore: evaluation.technicalScore,
+      communicationScore: evaluation.communicationScore,
+      problemSolvingScore: evaluation.overallScore,
+      roleRelevanceScore: evaluation.relevanceScore,
+      summary: evaluation.summary,
+      questions: []
+    };
+    
+    setInterviews(prev => [newRecord, ...prev.filter(i => i.applicationId !== appId)]);
+    updateApplicationStage(appId, 'shortlisted', `Human panel interview evaluated. Overall Score: ${evaluation.overallScore}/100.`);
   };
 
   const submitAdmissionsApplication = (
@@ -1045,97 +939,11 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     profileDetails?: any,
     jobId?: string
   ) => {
-    const newUserId = `usr_${Date.now()}`;
-    const newUser = {
-      id: newUserId,
-      name,
-      email,
-      password: password || 'password123',
-      role: 'candidate' as const,
-      provider: 'email' as const,
-      createdAt: new Date().toISOString()
-    };
-    
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    localStorage.setItem('hireai_users', JSON.stringify(updatedUsers));
-
-    const newProfileId = `prof_${Date.now()}`;
-    const newProfile = {
-      id: newProfileId,
-      userId: newUserId,
-      fullName: name,
-      email,
-      phone: profileDetails?.phone || '',
-      location: profileDetails?.location || 'Noida',
-      bio: profileDetails?.bio || '',
-      experienceYears: Number(profileDetails?.experienceYears) || 0,
-      expectedSalary: '₹8,00,000 / yr',
-      availability: 'Immediate',
-      openToWork: true,
-      domain: 'Engineering' as const,
-      skills: profileDetails?.skills || [],
-      experience: profileDetails?.experience || [],
-      education: profileDetails?.education || [],
-      certifications: [],
-      githubUrl: profileDetails?.githubUrl || '',
-      linkedinUrl: profileDetails?.linkedinUrl || '',
-      portfolioUrl: profileDetails?.portfolioUrl || '',
-      admissionScore: profileDetails?.admissionScore || 85,
-      applicationProgress: 100,
-      enrollmentStatus: 'applicant' as const
-    };
-
-    const updatedProfiles = [...candidateProfiles, newProfile];
-    setCandidateProfiles(updatedProfiles);
-    localStorage.setItem('hireai_candidate_profiles', JSON.stringify(updatedProfiles));
-
-    let newCvId = 'no_cv';
-    if (profileDetails?.cvText) {
-      const newCv = {
-        id: `cv_${Date.now()}`,
-        candidateId: newUserId,
-        title: `${name} Resume`,
-        isPrimary: true,
-        rawText: profileDetails.cvText,
-        parsedData: {
-          fullName: name,
-          email,
-          phone: profileDetails.phone || '',
-          location: profileDetails.location || '',
-          summary: profileDetails.bio || '',
-          experienceYears: Number(profileDetails.experienceYears) || 0,
-          expectedSalary: '₹8,00,000 / yr',
-          availability: 'Immediate',
-          skills: profileDetails.skills || [],
-          experience: profileDetails.experience || [],
-          education: profileDetails.education || [],
-          certifications: []
-        },
-        updatedAt: new Date().toISOString()
-      };
-      newCvId = newCv.id;
-      const updatedCvs = [...cvs, newCv];
-      setCvs(updatedCvs);
-      localStorage.setItem('hireai_cvs', JSON.stringify(updatedCvs));
+    // For legacy compat but fully mapping to recruitment apply flow
+    const newUser = signupCandidate(name, email, password);
+    if (jobId) {
+      associateCandidateWithJob(newUser.id, jobId);
     }
-
-    const newApp = {
-      id: `app_${Date.now()}`,
-      jobId: jobId || 'job_ai_bootcamp',
-      candidateId: newUserId,
-      cvId: newCvId,
-      status: 'shortlisted' as const,
-      stage: 2 as const,
-      interviewType: 'ai' as const,
-      appliedAt: new Date().toISOString()
-    };
-    const updatedApps = [...applications, newApp];
-    setApplications(updatedApps);
-    localStorage.setItem('hireai_applications', JSON.stringify(updatedApps));
-
-    setCurrentUser(newUser);
-    localStorage.setItem('hireai_current_user', JSON.stringify(newUser));
   };
 
   const updateUser = (userId: string, updates: Partial<User>) => {
@@ -1143,9 +951,7 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prev.map((u) => (u.id === userId ? { ...u, ...updates } : u))
     );
     if (currentUser?.id === userId) {
-      const updatedUser = { ...currentUser, ...updates };
-      setCurrentUser(updatedUser);
-      localStorage.setItem('hireai_current_user', JSON.stringify(updatedUser));
+      setCurrentUser(prev => prev ? { ...prev, ...updates } : null);
     }
   };
 
@@ -1168,6 +974,9 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isAiSearching,
         searchChatHistory,
         permissionMatrix,
+        notifications,
+        auditLogs,
+        applicationEvents,
         switchRole,
         createJob,
         updateJob,
@@ -1194,6 +1003,8 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         associateCandidateWithJob,
         addManualInterviewEvaluation,
         submitAdmissionsApplication,
+        addNotification,
+        markNotificationsAsRead
       }}
     >
       {children}

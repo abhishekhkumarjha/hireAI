@@ -24,7 +24,6 @@ const PORT = Number(process.env.PORT || 3000);
 
 const DB_FILE = path.join(process.cwd(), 'db.json');
 const isMongoConfigured = !!process.env.MONGODB_URI;
-const isUpstashConfigured = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
 
 let mongoClient: MongoClient | null = null;
 let mongoDb: any = null;
@@ -35,6 +34,17 @@ async function connectMongo() {
       mongoClient = new MongoClient(process.env.MONGODB_URI);
       await mongoClient.connect();
       mongoDb = mongoClient.db();
+      // Setup essential indexes if not setup already
+      try {
+        await mongoDb.collection('users').createIndex({ email: 1 }, { unique: true });
+        await mongoDb.collection('jobs').createIndex({ status: 1 });
+        await mongoDb.collection('applications').createIndex({ jobId: 1 });
+        await mongoDb.collection('applications').createIndex({ candidateId: 1 });
+        await mongoDb.collection('applications').createIndex({ status: 1 });
+        await mongoDb.collection('candidate_profiles').createIndex({ skills: 1 });
+      } catch (idxErr) {
+        console.warn('Index generation warning:', idxErr);
+      }
     } catch (err) {
       mongoClient = null;
       mongoDb = null;
@@ -55,53 +65,10 @@ function getInitialDb() {
     offerLetters: INITIAL_OFFER_LETTERS,
     invites: INITIAL_INVITE_TOKENS,
     searchChatHistory: [],
+    applicationEvents: [],
+    notifications: [],
+    auditLogs: [],
   };
-}
-
-// Initialize database (MongoDB Atlas, Upstash, or local file)
-async function initDb() {
-  if (isMongoConfigured) {
-    console.log('Database Mode: MongoDB Atlas');
-    try {
-      const db = await readDb();
-      if (!db || Object.keys(db).length === 0) {
-        console.log('MongoDB Atlas database is empty, initializing with mock data...');
-        await writeDb(getInitialDb());
-      }
-    } catch (err) {
-      console.error('Failed to initialize database in MongoDB Atlas, writing initial state:', err);
-      try {
-        await writeDb(getInitialDb());
-      } catch (writeErr) {
-        console.error('Failed to write initial state to MongoDB Atlas:', writeErr);
-      }
-    }
-  } else if (isUpstashConfigured) {
-    console.log('Database Mode: Upstash Redis REST API');
-    try {
-      const db = await readDb();
-      if (!db || Object.keys(db).length === 0) {
-        console.log('Upstash Redis database is empty, initializing with mock data...');
-        await writeDb(getInitialDb());
-      }
-    } catch (err) {
-      console.error('Failed to initialize database in Upstash Redis, writing initial state:', err);
-      try {
-        await writeDb(getInitialDb());
-      } catch (writeErr) {
-        console.error('Failed to write initial state to Upstash Redis:', writeErr);
-      }
-    }
-  } else {
-    console.log('Database Mode: Local file-based database (db.json)');
-    if (!fs.existsSync(DB_FILE)) {
-      try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(getInitialDb(), null, 2), 'utf-8');
-      } catch (err) {
-        console.error('Error creating db.json:', err);
-      }
-    }
-  }
 }
 
 // Read database
@@ -109,103 +76,104 @@ async function readDb(): Promise<any> {
   if (isMongoConfigured) {
     try {
       await connectMongo();
-      if (!mongoDb) {
-        throw new Error('MongoDB connection is not established');
+      if (!mongoDb) throw new Error('No MongoDB connection');
+      const collections = [
+        'users', 'candidate_profiles', 'cvs', 'jobs', 'applications',
+        'interviews', 'offer_templates', 'offer_letters', 'invites',
+        'search_chat_history', 'application_events', 'notifications', 'audit_logs'
+      ];
+      
+      const dbData: any = {};
+      for (const colName of collections) {
+        const docs = await mongoDb.collection(colName).find({}).toArray();
+        const mappedName = colName === 'candidate_profiles' ? 'candidateProfiles'
+                         : colName === 'offer_templates' ? 'offerTemplates'
+                         : colName === 'offer_letters' ? 'offerLetters'
+                         : colName === 'search_chat_history' ? 'searchChatHistory'
+                         : colName === 'application_events' ? 'applicationEvents'
+                         : colName === 'audit_logs' ? 'auditLogs'
+                         : colName;
+        dbData[mappedName] = docs.map((d: any) => {
+          const { _id, ...rest } = d;
+          return rest;
+        });
       }
-      const col = mongoDb.collection('app_state');
-      const doc = await col.findOne({ _id: 'hire_ai_db_state' });
-      if (!doc) {
-        return {};
-      }
-      const { _id, ...rest } = doc;
-      return rest;
+      return dbData;
     } catch (err) {
-      console.error('Error reading from MongoDB Atlas:', err);
-      return {};
+      console.error('Error reading from MongoDB Atlas, falling back to db.json:', err);
     }
-  } else if (isUpstashConfigured) {
-    try {
-      const url = `${process.env.UPSTASH_REDIS_REST_URL!.replace(/\/$/, '')}/`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(['GET', 'hire_ai_db_state'])
-      });
-      if (!res.ok) {
-        throw new Error(`Upstash response code: ${res.status}`);
-      }
-      const data: any = await res.json();
-      if (!data || data.result === null || data.result === undefined) {
-        return {};
-      }
-      return JSON.parse(data.result);
-    } catch (err) {
-      console.error('Error reading from Upstash Redis:', err);
-      return {};
+  }
+  
+  // Local fallback
+  try {
+    if (!fs.existsSync(DB_FILE)) {
+      return getInitialDb();
     }
-  } else {
-    try {
-      if (!fs.existsSync(DB_FILE)) {
-        return getInitialDb();
-      }
-      const data = fs.readFileSync(DB_FILE, 'utf-8');
-      return JSON.parse(data);
-    } catch (err) {
-      console.error('Error reading db.json:', err);
-      return {};
-    }
+    const data = fs.readFileSync(DB_FILE, 'utf-8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error reading db.json:', err);
+    return getInitialDb();
   }
 }
 
-// Write database
-async function writeDb(dbData: any): Promise<void> {
+// Write database / Sync specific collection
+async function writeDbCollection(colName: string, dataArray: any[]): Promise<void> {
   if (isMongoConfigured) {
     try {
       await connectMongo();
-      if (!mongoDb) {
-        throw new Error('MongoDB connection is not established');
+      if (!mongoDb) throw new Error('No MongoDB connection');
+      const dbColName = colName === 'candidateProfiles' ? 'candidate_profiles'
+                      : colName === 'offerTemplates' ? 'offer_templates'
+                      : colName === 'offerLetters' ? 'offer_letters'
+                      : colName === 'searchChatHistory' ? 'search_chat_history'
+                      : colName === 'applicationEvents' ? 'application_events'
+                      : colName === 'auditLogs' ? 'audit_logs'
+                      : colName;
+
+      const col = mongoDb.collection(dbColName);
+      await col.deleteMany({});
+      if (dataArray.length > 0) {
+        await col.insertMany(dataArray);
       }
-      const col = mongoDb.collection('app_state');
-      await col.replaceOne(
-        { _id: 'hire_ai_db_state' },
-        { ...dbData, _id: 'hire_ai_db_state' },
-        { upsert: true }
-      );
+      return;
     } catch (err) {
-      console.error('Error writing to MongoDB Atlas:', err);
+      console.error(`Error writing collection ${colName} to MongoDB:`, err);
     }
-  } else if (isUpstashConfigured) {
-    try {
-      const url = `${process.env.UPSTASH_REDIS_REST_URL!.replace(/\/$/, '')}/`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(['SET', 'hire_ai_db_state', JSON.stringify(dbData)])
-      });
-      if (!res.ok) {
-        throw new Error(`Upstash response code: ${res.status}`);
-      }
-    } catch (err) {
-      console.error('Error writing to Upstash Redis:', err);
+  }
+
+  // Local fallback
+  try {
+    let currentDb = getInitialDb() as any;
+    if (fs.existsSync(DB_FILE)) {
+      currentDb = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
     }
-  } else {
-    try {
-      fs.writeFileSync(DB_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('Error writing db.json:', err);
-    }
+    currentDb[colName] = dataArray;
+    fs.writeFileSync(DB_FILE, JSON.stringify(currentDb, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Error writing to db.json fallback:', err);
   }
 }
 
-// Configure CORS to allow cross-origin requests
+async function initDb() {
+  try {
+    const db = await readDb();
+    if (!db.users || db.users.length === 0) {
+      console.log('Database empty, pre-populating with recruitment initial datasets...');
+      const initial = getInitialDb();
+      for (const [key, value] of Object.entries(initial)) {
+        await writeDbCollection(key, value);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to initialize database:', err);
+  }
+}
+
+// Configure CORS and allow Frontend URL from env
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const allowedOrigin = process.env.FRONTEND_URL || '*';
+  res.header('Access-Control-Allow-Origin', allowedOrigin);
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') {
@@ -217,7 +185,7 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '10mb' }));
 
-// Database APIs
+// Database REST API Endpoints
 app.get('/api/db', async (req, res) => {
   try {
     const db = await readDb();
@@ -236,10 +204,8 @@ app.post('/api/db/sync', async (req, res) => {
   }
   
   try {
-    const db = await readDb();
-    db[collection] = data;
-    await writeDb(db);
-    res.json({ success: true, db });
+    await writeDbCollection(collection, data);
+    res.json({ success: true });
   } catch (error) {
     console.error('Error syncing database:', error);
     res.status(500).json({ error: 'Failed to sync database data' });
@@ -256,12 +222,12 @@ const ai = new GoogleGenAI({
   },
 });
 
-// 1. Health check endpoint
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 2. AI Resume Parser API
+// AI Resume Parser API - Returns strict JSON profile info
 app.post('/api/parse-cv', async (req, res) => {
   const { cvText } = req.body;
   if (!cvText || typeof cvText !== 'string') {
@@ -270,7 +236,8 @@ app.post('/api/parse-cv', async (req, res) => {
   }
 
   try {
-    const prompt = `You are an expert HR AI Resume Parser. Parse the following candidate resume text into a structured JSON profile object. Extract skills, experience history, education, estimated total years of experience, current location, contact info, and summary.
+    const prompt = `You are an expert HR AI Resume Parser. Parse the following candidate resume text into a structured JSON profile object. Extract skills, experience history, education, estimated total years of experience, current location, contact info, expectedSalary, availability, certifications, and a summary.
+Do not invent or fabricate details.
 
 Resume Text:
 """
@@ -343,79 +310,45 @@ ${cvText}
     const parsedJson = JSON.parse(response.text || '{}');
     res.json({ success: true, data: parsedJson });
   } catch (error: any) {
-    console.error('Error in /api/parse-cv, running offline fallback parsing:', error);
-    // Run fallback parsing locally
+    console.error('Error in Gemini /api/parse-cv, running offline fallback parsing:', error);
+    // Safe offline fallback
     const lines = cvText.split('\n').map((l: string) => l.trim()).filter(Boolean);
-    const fullName = lines[0] || 'ABHISHEKH KUMAR JHA';
+    const fullName = lines[0] || 'Rahul Kumar';
     const emailMatch = cvText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    const email = emailMatch ? emailMatch[0] : 'abhishek.jha@cloudinntech.co.in';
+    const email = emailMatch ? emailMatch[0] : 'rahul.sharma98@gmail.com';
     const phoneMatch = cvText.match(/(?:\+?\d{1,3}[- ]?)?\(?\d{3}\)?[- ]?\d{3}[- ]?\d{4}/);
-    const phone = phoneMatch ? phoneMatch[0] : '+1 (555) 019-2834';
+    const phone = phoneMatch ? phoneMatch[0] : '+91-9123456789';
     
-    let location = 'Pune, India';
-    if (cvText.toLowerCase().includes('sf') || cvText.toLowerCase().includes('san francisco')) {
-      location = 'San Francisco, CA';
-    }
-
-    const skillKeywords = ['react', 'node', 'typescript', 'javascript', 'python', 'aws', 'docker', 'kubernetes', 'html', 'css', 'sql', 'express'];
+    let location = 'Jaipur, India';
+    const skillKeywords = ['react', 'node', 'typescript', 'javascript', 'python', 'aws', 'docker', 'kubernetes', 'html', 'css', 'sql', 'java', 'spring boot'];
     const skills: string[] = [];
     skillKeywords.forEach(k => {
       if (new RegExp(`\\b${k}\\b`, 'i').test(cvText)) {
-        if (k === 'typescript') skills.push('TypeScript');
-        else if (k === 'javascript') skills.push('JavaScript');
-        else if (k === 'react') skills.push('React');
-        else if (k === 'node') skills.push('Node.js');
-        else if (k === 'aws') skills.push('AWS');
-        else if (k === 'docker') skills.push('Docker');
-        else if (k === 'kubernetes') skills.push('Kubernetes');
-        else if (k === 'express') skills.push('Express');
-        else skills.push(k.toUpperCase());
+        skills.push(k.toUpperCase());
       }
     });
-    if (skills.length === 0) {
-      skills.push('Software Engineering', 'Full Stack Development');
-    }
 
-    let expYears = 3;
-    const expMatch = cvText.match(/(\d+)\+?\s*years?/i);
-    if (expMatch) {
-      expYears = parseInt(expMatch[1]);
-    }
-
-    const fallbackJson = {
-      fullName,
-      email,
-      phone,
-      location,
-      summary: lines.slice(1, 3).join(' ') || 'Qualified software developer focused on robust frontend and backend architectures.',
-      experienceYears: expYears,
-      expectedSalary: '$90,000 / yr',
-      availability: 'Immediate',
-      skills,
-      experience: [
-        {
-          id: 'exp_1',
-          company: 'CloudInnTech',
-          role: 'Software Engineer',
-          duration: '2024 - Present',
-          description: 'Developed and optimized client web applications using React, Node, and TypeScript.'
-        }
-      ],
-      education: [
-        {
-          id: 'edu_1',
-          institution: 'University of Technology',
-          degree: 'B.S. Computer Science',
-          year: '2023'
-        }
-      ],
-      certifications: []
-    };
-    res.json({ success: true, data: fallbackJson });
+    res.json({
+      success: true,
+      data: {
+        fullName,
+        email,
+        phone,
+        location,
+        summary: 'Parsed Candidate Resume.',
+        experienceYears: 4,
+        expectedSalary: '₹14,00,000 / yr',
+        availability: 'Immediate',
+        skills: skills.length ? skills : ['Software Engineering'],
+        experience: [],
+        education: [],
+        certifications: []
+      }
+    });
   }
 });
 
-// 3. AI Recruiter Natural Language Candidate Search
+// AI Recruiter Natural Language Candidate Search
 app.post('/api/recruiter/ai-search', async (req, res) => {
   const { query, candidates, history } = req.body;
   if (!query || !Array.isArray(candidates)) {
@@ -428,7 +361,7 @@ app.post('/api/recruiter/ai-search', async (req, res) => {
       ? history.map(msg => `${msg.sender === 'recruiter' ? 'Recruiter' : 'AI Assistant'}: ${msg.text}`).join('\n')
       : `Recruiter: ${query}`;
 
-    const prompt = `You are an AI Recruitment Intelligence System.
+    const prompt = `You are CloudInnTech Recruitment Intelligence Copilot.
 The recruiter is searching or refining candidate profiles. Here is the conversational search history:
 """
 ${conversationContext}
@@ -436,7 +369,7 @@ ${conversationContext}
 
 Evaluate each of the following candidate profiles against this context.
 Calculate a match percentage (0-100), identify matched skills, missing skills, concise highlights, and clear reasoning for why this candidate fits or does not fit.
-Additionally, formulate a brief, natural conversational reply in 'relevanceOverview' explaining the search results or the refinement (e.g., "I've narrowed down the search to only show candidates available immediately...").
+Additionally, formulate a brief, natural conversational reply in 'relevanceOverview' explaining the search results.
 
 Candidate Profiles:
 ${JSON.stringify(candidates, null, 2)}
@@ -488,7 +421,7 @@ ${JSON.stringify(candidates, null, 2)}
     // Evaluate candidates locally
     const queryLower = query.toLowerCase();
     const results = candidates.map(cand => {
-      let score = 60; // base score
+      let score = 55;
       const matchedSkills: string[] = [];
       const missingSkills: string[] = [];
       const highlights: string[] = [];
@@ -502,15 +435,9 @@ ${JSON.stringify(candidates, null, 2)}
         }
       });
 
-      if (cand.location?.toLowerCase().includes('remote') && queryLower.includes('remote')) {
-        score += 20;
-        highlights.push('Remote preference matches');
-      }
-      if (queryLower.includes('experience') || queryLower.includes('senior')) {
-        if (cand.experienceYears >= 5) {
-          score += 15;
-          highlights.push('Strong senior experience matching');
-        }
+      if (cand.experienceYears >= 4) {
+        score += 15;
+        highlights.push('Experienced technical background');
       }
 
       score = Math.min(score, 100);
@@ -518,34 +445,31 @@ ${JSON.stringify(candidates, null, 2)}
       return {
         candidateId: cand.id,
         matchPercentage: score,
-        relevanceReasoning: `Local evaluation indicates a ${score}% match. Matched skills: ${matchedSkills.join(', ') || 'General profile match'}.`,
+        relevanceReasoning: `Local database match profile score calculated at ${score}%.`,
         matchedSkills,
         missingSkills: missingSkills.slice(0, 3),
-        highlights: highlights.length > 0 ? highlights : ['Solid technical background', 'Immediate availability']
+        highlights: highlights.length > 0 ? highlights : ['Immediate availability']
       };
     });
 
     results.sort((a, b) => b.matchPercentage - a.matchPercentage);
-
-    const fallbackData = {
-      relevanceOverview: `I evaluated ${candidates.length} candidates against your search "${query}" locally. Showing top matches based on keyword relevance and experience profiles.`,
-      searchCriteriaSummary: {
-        targetSkills: queryLower.match(/\b(react|typescript|node|python|aws|docker)\b/gi) || [],
-        minExperienceYears: queryLower.includes('senior') ? 5 : 1,
-        locationPreference: queryLower.includes('remote') ? 'Remote' : 'Any',
-        availability: 'Immediate'
-      },
-      results
-    };
-    res.json({ success: true, data: fallbackData });
+    res.json({
+      success: true,
+      data: {
+        relevanceOverview: `Evaluated candidates against query: "${query}" locally.`,
+        searchCriteriaSummary: { targetSkills: [], minExperienceYears: 1, locationPreference: 'Any', availability: 'Immediate' },
+        results
+      }
+    });
   }
 });
 
-// 4. AI Interview Questions Generator
+// AI Interview Questions Generator
 app.post('/api/ai-interview/generate', async (req, res) => {
   const { jobTitle, requirements, candidateName, candidateSkills } = req.body;
   try {
     const prompt = `Generate 4 highly relevant, role-specific technical and behavioral interview questions for position "${jobTitle}" tailored to candidate "${candidateName}".
+Provide questions in categories like Technical, Behavioral, System Design, Problem Solving.
 
 Job Requirements: ${JSON.stringify(requirements || [])}
 Candidate Skills: ${JSON.stringify(candidateSkills || [])}`;
@@ -562,7 +486,7 @@ Candidate Skills: ${JSON.stringify(candidateSkills || [])}`;
             properties: {
               id: { type: Type.STRING },
               question: { type: Type.STRING },
-              category: { type: Type.STRING, description: 'Technical, Behavioral, System Design, or Problem Solving' },
+              category: { type: Type.STRING },
             },
             required: ['id', 'question', 'category'],
           },
@@ -576,20 +500,19 @@ Candidate Skills: ${JSON.stringify(candidateSkills || [])}`;
     console.error('Error generating AI interview questions, running offline fallback:', error);
     const defaultQuestions = [
       { id: 'q1', question: `Explain your experience building scalable solutions as a ${jobTitle || 'Developer'}.`, category: 'Technical' },
-      { id: 'q2', question: `How do you optimize state management and handle performance in complex frontend web applications?`, category: 'Technical' },
-      { id: 'q3', question: `Walk us through a system architecture design decision you made. What were the key trade-offs?`, category: 'System Design' },
-      { id: 'q4', question: `Tell us about a time you had a technical disagreement with a team member. How did you resolve it?`, category: 'Behavioral' }
+      { id: 'q2', question: `How do you manage pipelines, API testing, and performance updates?`, category: 'Technical' },
+      { id: 'q3', question: `Walk us through a critical system architecture or database design decision you made.`, category: 'System Design' },
+      { id: 'q4', question: `Describe a collaborative challenge you experienced in a team environment.`, category: 'Behavioral' }
     ];
     res.json({ success: true, questions: defaultQuestions });
   }
 });
 
-// 5. AI Interview Evaluation & Rubric Scoring
+// AI Interview Evaluation & Rubric Scoring
 app.post('/api/ai-interview/evaluate', async (req, res) => {
   const { jobTitle, questionsWithAnswers } = req.body;
   try {
     const prompt = `You are a Senior Technical Recruiter and AI Interviewer. Evaluate candidate answers for job title "${jobTitle}".
-
 Questions & Candidate Answers:
 ${JSON.stringify(questionsWithAnswers, null, 2)}
 
@@ -629,44 +552,26 @@ Provide scores (0-100) for overall performance, technical accuracy, communicatio
     res.json({ success: true, evaluation: evalResult });
   } catch (error: any) {
     console.error('Error evaluating AI interview, running offline fallback evaluation:', error);
-    const scoredQuestions = (questionsWithAnswers || []).map((ans: any) => {
-      const len = ans.answer?.length || 0;
-      let score = 70;
-      let feedback = 'Provided a general overview of the concept.';
-      
-      if (len > 120) {
-        score = 92;
-        feedback = 'Detailed response showing strong conceptual depth and practical awareness.';
-      } else if (len > 60) {
-        score = 82;
-        feedback = 'Clear, concise response addressing the core question.';
-      } else if (len === 0) {
-        score = 0;
-        feedback = 'No answer provided.';
+    const scoredQuestions = (questionsWithAnswers || []).map((ans: any) => ({
+      questionId: ans.id,
+      score: ans.answer ? 85 : 0,
+      feedback: ans.answer ? 'Provided a valid response addressing requirements.' : 'No answer provided.'
+    }));
+    res.json({
+      success: true,
+      evaluation: {
+        overallScore: 80,
+        technicalScore: 82,
+        communicationScore: 80,
+        relevanceScore: 80,
+        summary: 'Offline fallback evaluation. Responses are solid and candidate shows necessary skills.',
+        questionEvaluations: scoredQuestions
       }
-
-      return {
-        questionId: ans.id,
-        score,
-        feedback
-      };
     });
-
-    const avgScore = Math.round(scoredQuestions.reduce((acc: number, q: any) => acc + (q.score || 0), 0) / (scoredQuestions.length || 1)) || 75;
-
-    const fallbackEval = {
-      overallScore: avgScore,
-      technicalScore: Math.min(100, Math.round(avgScore * 1.02)),
-      communicationScore: Math.round(avgScore * 0.98),
-      relevanceScore: avgScore,
-      summary: 'Local AI Evaluation: Candidate answers show standard understanding. Explanations are coherent and structured correctly.',
-      questionEvaluations: scoredQuestions
-    };
-    res.json({ success: true, evaluation: fallbackEval });
   }
 });
 
-// 6. Offer Letter Drafting API
+// Offer Letter Drafting API
 app.post('/api/offer-letter/generate', async (req, res) => {
   const { candidateName, role, companyName, salary, joiningDate, benefits, customNotes } = req.body;
   try {
@@ -708,7 +613,6 @@ We look forward to welcoming you to our team!`;
 
 // Setup Vite Development or Production Static Serving
 async function startServer() {
-  // Initialize the database asynchronously before starting the server
   await initDb();
 
   if (process.env.NODE_ENV !== 'production') {

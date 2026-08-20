@@ -21,7 +21,7 @@ export const INITIAL_USERS: User[] = [
   },
   {
     id: 'usr_recruiter_john',
-    name: 'John',
+    name: 'John Doe',
     email: 'john@cloudinntech.co.in',
     password: 'password123',
     role: 'recruiter',
@@ -42,7 +42,7 @@ export const INITIAL_USERS: User[] = [
     name: 'Rohan Gupta',
     email: 'rohan@gmail.com',
     password: 'password123',
-    role: 'candidate', // Approved, can login directly! (enrollmentStatus controls student access)
+    role: 'candidate',
     provider: 'email',
     createdAt: '2026-01-04T00:00:00Z',
   },
@@ -66,7 +66,7 @@ export const INITIAL_USERS: User[] = [
   },
   {
     id: 'usr_candidate_rahul_sharma',
-    name: 'Rahul Sharma',
+    name: 'Rahul Kumar',
     email: 'rahul.sharma98@gmail.com',
     password: 'password123',
     role: 'candidate',
@@ -82,23 +82,28 @@ export const INITIAL_CANDIDATE_PROFILES: CandidateProfile[] = [
     fullName: 'Priya Patel',
     email: 'priya@gmail.com',
     phone: '+91-9876543210',
-    location: 'Mumbai',
-    bio: 'Aspiring AI engineer with a background in python programming.',
+    location: 'Mumbai, India',
+    bio: 'Experienced Software Engineer specializing in Python microservices and backend database logic.',
     experienceYears: 1,
     expectedSalary: '₹8,00,000 / yr',
+    currentSalary: '₹6,00,000 / yr',
     availability: 'Immediate',
     openToWork: true,
     domain: 'Engineering',
-    skills: ['Python', 'SQL', 'HTML', 'CSS'],
-    experience: [],
-    education: [],
+    skills: ['Python', 'SQL', 'HTML', 'CSS', 'PostgreSQL'],
+    experience: [
+      { id: 'exp_p1', company: 'TechLabs India', role: 'Junior Python Developer', duration: 'Jul 2024 - Present', description: 'Assisted in building REST APIs and scheduling ETL jobs in Python and SQL.' }
+    ],
+    education: [
+      { id: 'edu_p1', institution: 'Mumbai University', degree: 'B.S. Information Technology', year: '2024' }
+    ],
     certifications: [],
     githubUrl: 'https://github.com/priyapatel',
     portfolioUrl: 'https://priyapatel.dev',
     linkedinUrl: 'https://linkedin.com/in/priyapatel',
-    admissionScore: 91,
-    applicationProgress: 100,
-    enrollmentStatus: 'applicant'
+    profileCompletion: 80,
+    createdAt: '2026-01-03T00:00:00Z',
+    updatedAt: '2026-01-03T00:00:00Z'
   },
   {
     id: 'prof_rohan',
@@ -106,23 +111,28 @@ export const INITIAL_CANDIDATE_PROFILES: CandidateProfile[] = [
     fullName: 'Rohan Gupta',
     email: 'rohan@gmail.com',
     phone: '+91-8888888888',
-    location: 'Delhi',
-    bio: 'Fullstack developer currently enrolled in the AI Boot Camp.',
+    location: 'Delhi, India',
+    bio: 'Fullstack Engineer focused on building reactive, accessible interfaces in React, TypeScript, and Node.js.',
     experienceYears: 2,
     expectedSalary: '₹12,00,000 / yr',
+    currentSalary: '₹9,00,000 / yr',
     availability: '30 Days',
-    openToWork: false,
+    openToWork: true,
     domain: 'Engineering',
-    skills: ['React', 'Node.js'],
-    experience: [],
-    education: [],
+    skills: ['React', 'Node.js', 'TypeScript', 'JavaScript', 'Tailwind CSS'],
+    experience: [
+      { id: 'exp_ro1', company: 'DevScale Co', role: 'Full Stack Engineer', duration: 'Jan 2024 - Present', description: 'Developed React web portals and unified dashboard views with low-latency client state synchronization.' }
+    ],
+    education: [
+      { id: 'edu_ro1', institution: 'Delhi Technological University', degree: 'B.Tech Software Engineering', year: '2023' }
+    ],
     certifications: [],
     githubUrl: 'https://github.com/rohangupta',
     portfolioUrl: 'https://rohan.dev',
     linkedinUrl: 'https://linkedin.com/in/rohangupta',
-    admissionScore: 85,
-    applicationProgress: 100,
-    enrollmentStatus: 'student'
+    profileCompletion: 85,
+    createdAt: '2026-01-04T00:00:00Z',
+    updatedAt: '2026-01-04T00:00:00Z'
   },
   {
     id: 'prof_amit',
@@ -130,23 +140,25 @@ export const INITIAL_CANDIDATE_PROFILES: CandidateProfile[] = [
     fullName: 'Amit Sharma',
     email: 'amit@gmail.com',
     phone: '+91-9999999999',
-    location: 'Noida',
-    bio: 'Wants to build Generative Agents.',
+    location: 'Noida, India',
+    bio: 'Entry-level backend engineer interested in Python backend services and cloud pipelines.',
     experienceYears: 0,
     expectedSalary: '₹6,00,000 / yr',
     availability: 'Immediate',
     openToWork: true,
     domain: 'Engineering',
-    skills: [],
+    skills: ['Python', 'SQL'],
     experience: [],
-    education: [],
+    education: [
+      { id: 'edu_a1', institution: 'Amity University', degree: 'B.Tech Computer Science', year: '2025' }
+    ],
     certifications: [],
     githubUrl: '',
     portfolioUrl: '',
     linkedinUrl: '',
-    admissionScore: undefined,
-    applicationProgress: 100,
-    enrollmentStatus: 'applicant'
+    profileCompletion: 60,
+    createdAt: '2026-01-05T00:00:00Z',
+    updatedAt: '2026-01-05T00:00:00Z'
   },
   {
     id: 'prof_vikram',
@@ -154,34 +166,42 @@ export const INITIAL_CANDIDATE_PROFILES: CandidateProfile[] = [
     fullName: 'Vikram Singh',
     email: 'vikram@gmail.com',
     phone: '+91-7777777777',
-    location: 'Bengaluru',
-    bio: 'Interested in DevOps automation.',
+    location: 'Bengaluru, India',
+    bio: 'DevOps automation expert specialized in Kubernetes deployment orchestrations and AWS infrastructure architecture.',
     experienceYears: 3,
     expectedSalary: '₹14,00,000 / yr',
+    currentSalary: '₹11,00,000 / yr',
     availability: '30 Days',
     openToWork: true,
-    domain: 'Engineering',
-    skills: ['Kubernetes', 'AWS'],
-    experience: [],
-    education: [],
-    certifications: [],
+    domain: 'DevOps',
+    skills: ['Kubernetes', 'AWS', 'Docker', 'Terraform', 'CI/CD'],
+    experience: [
+      { id: 'exp_v1', company: 'CloudOps Systems', role: 'DevOps Engineer', duration: 'Jun 2023 - Present', description: 'Maintained production AWS cluster configurations and built automatic testing pipelines.' }
+    ],
+    education: [
+      { id: 'edu_v1', institution: 'VIT Vellore', degree: 'B.Tech Computer Science', year: '2023' }
+    ],
+    certifications: [
+      { id: 'cert_v1', title: 'AWS Solutions Architect Associate', issuer: 'Amazon Web Services', year: '2024' }
+    ],
     githubUrl: 'https://github.com/vikramdevops',
     portfolioUrl: '',
     linkedinUrl: '',
-    admissionScore: 88,
-    applicationProgress: 100,
-    enrollmentStatus: 'applicant'
+    profileCompletion: 80,
+    createdAt: '2026-01-06T00:00:00Z',
+    updatedAt: '2026-01-06T00:00:00Z'
   },
   {
     id: 'prof_rahul_sharma',
     userId: 'usr_candidate_rahul_sharma',
-    fullName: 'Rahul Sharma',
+    fullName: 'Rahul Kumar',
     email: 'rahul.sharma98@gmail.com',
     phone: '+91-9123456789',
     location: 'Jaipur, India',
-    bio: 'Senior Software Engineer with experience in payment microservices, Spring Boot, React, Node.js, and AWS.',
+    bio: 'Senior Software Engineer with extensive experience in payment microservices, Spring Boot, React, Node.js, and AWS.',
     experienceYears: 6,
     expectedSalary: '₹18,00,000 / yr',
+    currentSalary: '₹14,00,000 / yr',
     availability: '15 Days',
     openToWork: true,
     domain: 'Engineering',
@@ -200,9 +220,9 @@ export const INITIAL_CANDIDATE_PROFILES: CandidateProfile[] = [
     githubUrl: 'https://github.com/rahul-sharma',
     portfolioUrl: 'https://rahul-sharma.dev',
     linkedinUrl: 'https://linkedin.com/in/rahul-sharma',
-    admissionScore: 94,
-    applicationProgress: 100,
-    enrollmentStatus: 'applicant'
+    profileCompletion: 95,
+    createdAt: '2026-01-07T00:00:00Z',
+    updatedAt: '2026-01-07T00:00:00Z'
   }
 ];
 
@@ -210,225 +230,217 @@ export const INITIAL_CVS: CVItem[] = [
   {
     id: 'cv_priya',
     candidateId: 'usr_candidate_priya',
-    title: 'Priya Patel CV',
+    title: 'Priya Patel - Backend Python Developer',
     isPrimary: true,
-    rawText: 'Priya Patel Resume.',
+    rawText: 'Priya Patel Resume. Python backend developer with experience in API testing and database programming.',
     parsedData: {
       fullName: 'Priya Patel',
       email: 'priya@gmail.com',
       phone: '+91-9876543210',
-      location: 'Mumbai',
-      summary: 'Aspiring AI engineer.',
+      location: 'Mumbai, India',
+      summary: 'Backend Engineer specializing in Python and API scaling.',
       experienceYears: 1,
-      expectedSalary: '₹8,0,000 / yr',
+      expectedSalary: '₹8,00,000 / yr',
       availability: 'Immediate',
-      skills: ['Python', 'SQL'],
-      experience: [],
-      education: [],
+      skills: ['Python', 'SQL', 'PostgreSQL'],
+      experience: [
+        { id: 'exp_p1', company: 'TechLabs India', role: 'Junior Python Developer', duration: 'Jul 2024 - Present', description: 'Assisted in building REST APIs and scheduling ETL jobs in Python and SQL.' }
+      ],
+      education: [
+        { id: 'edu_p1', institution: 'Mumbai University', degree: 'B.S. Information Technology', year: '2024' }
+      ],
       certifications: []
     },
+    uploadedAt: '2026-01-03T00:00:00Z',
     updatedAt: '2026-01-03T00:00:00Z'
   },
   {
     id: 'cv_vikram',
     candidateId: 'usr_candidate_vikram',
-    title: 'Vikram Singh CV',
+    title: 'Vikram Singh - DevOps CV',
     isPrimary: true,
-    rawText: 'Vikram Singh Resume. DevOps.',
+    rawText: 'Vikram Singh Resume. DevOps engineer with Kubernetes, CI/CD, and AWS architecture certifications.',
     parsedData: {
       fullName: 'Vikram Singh',
       email: 'vikram@gmail.com',
       phone: '+91-7777777777',
-      location: 'Bengaluru',
-      summary: 'DevOps Engineer.',
+      location: 'Bengaluru, India',
+      summary: 'DevOps engineer with Kubernetes and cloud optimization focus.',
       experienceYears: 3,
-      expectedSalary: '₹14,0,000 / yr',
+      expectedSalary: '₹14,00,000 / yr',
       availability: '30 Days',
-      skills: ['Kubernetes', 'AWS'],
-      experience: [],
-      education: [],
-      certifications: []
+      skills: ['Kubernetes', 'AWS', 'Docker'],
+      experience: [
+        { id: 'exp_v1', company: 'CloudOps Systems', role: 'DevOps Engineer', duration: 'Jun 2023 - Present', description: 'Maintained production AWS cluster configurations and built automatic testing pipelines.' }
+      ],
+      education: [
+        { id: 'edu_v1', institution: 'VIT Vellore', degree: 'B.Tech Computer Science', year: '2023' }
+      ],
+      certifications: [
+        { id: 'cert_v1', title: 'AWS Solutions Architect Associate', issuer: 'Amazon Web Services', year: '2024' }
+      ]
     },
+    uploadedAt: '2026-01-06T00:00:00Z',
     updatedAt: '2026-01-06T00:00:00Z'
   }
 ];
 
-const CLOUDINNTECH_COURSE_INFO = {
-  duration: '3–4 Months',
-  schedule: 'Weekend live training — Saturday: 2 hours, Sunday: 2 hours',
-  format: '100% online live instructor-led interactive classes',
-  contentHours: '150+ hours of expert-led sessions',
-  practice: 'Hands-on labs and practical assignments',
-  projects: 'Real-time industry projects and a capstone project',
-  technology: 'AI tools, Generative AI, and Agentic AI integration',
-  experience: 'Internship opportunity on live projects',
-  guidance: 'Industry mentor support',
-  careerPrep: 'Resume building and interview preparation',
-  certification: 'Certification assistance',
-  placement: 'Placement assistance',
-  entrepreneurship: 'Freelancing and startup guidance',
-  access: 'Lifetime access to learning resources and recorded sessions',
-  regionalPricing: {
-    'United States': 'US$500',
-    'European Union': '€500',
-    'UAE / Dubai': 'AED 2,500',
-    Singapore: 'SGD 600',
-    Australia: 'AUS$850',
-    India: 'Rs 50,000',
-    Russia: 'RUB 50,000',
-  },
-};
-
-const CLOUDINNTECH_MASTERS_PROGRAMS: Array<{ id: string; title: string; domain: Job['domain'] }> = [
-  { id: 'job_ai_bootcamp', title: 'Masters in AI with Project Management', domain: 'Product' },
-  { id: 'job_business_intelligence_bootcamp', title: 'Masters in AI with Business Intelligence', domain: 'Data & AI' },
-  { id: 'job_data_science_bootcamp', title: 'Masters in AI with Data Science', domain: 'Data & AI' },
-  { id: 'job_business_analysis_bootcamp', title: 'Masters in AI with Business Analysis', domain: 'Product' },
-  { id: 'job_aws_cloud_bootcamp', title: 'Masters in AI with AWS Cloud Architect', domain: 'DevOps' },
-  { id: 'job_gcp_cloud_bootcamp', title: 'Masters in AI with Google Cloud Architect', domain: 'DevOps' },
-  { id: 'job_azure_cloud_bootcamp', title: 'Masters in AI with Microsoft Azure Cloud Architect', domain: 'DevOps' },
-  { id: 'job_oracle_cloud_bootcamp', title: 'Masters in AI with Oracle Cloud Architect', domain: 'DevOps' },
-  { id: 'job_databricks_bootcamp', title: 'Masters in AI with Databricks', domain: 'Data & AI' },
-  { id: 'job_devops_bootcamp', title: 'Masters in AI with AWS DevOps Engineering', domain: 'DevOps' },
-  { id: 'job_gcp_devops_bootcamp', title: 'Masters in AI with Google Cloud DevOps Engineering', domain: 'DevOps' },
-  { id: 'job_azure_devops_bootcamp', title: 'Masters in AI with Microsoft Azure DevOps Engineering', domain: 'DevOps' },
-  { id: 'job_aws_data_engineering_bootcamp', title: 'Masters in AI with AWS Data Engineering', domain: 'Data & AI' },
-  { id: 'job_gcp_data_engineering_bootcamp', title: 'Masters in AI with Google Cloud Data Engineering', domain: 'Data & AI' },
-  { id: 'job_azure_fabric_bootcamp', title: 'Masters in AI with Microsoft Azure & Microsoft Fabric', domain: 'Data & AI' },
-  { id: 'job_oracle_data_engineering_bootcamp', title: 'Masters in AI with Oracle Data Engineering', domain: 'Data & AI' },
-  { id: 'job_cortex_snowflake_bootcamp', title: 'Masters in Cortex AI with Snowflake', domain: 'Data & AI' },
-  { id: 'job_snowflake_data_bootcamp', title: 'Masters in AI with Snowflake Data Engineering', domain: 'Data & AI' },
-  { id: 'job_mlops_bootcamp', title: 'Masters in AI with MLOps Engineering', domain: 'DevOps' },
-  { id: 'job_full_stack_bootcamp', title: 'Masters in AI with Full Stack Development', domain: 'Engineering' },
-  { id: 'job_blockchain_bootcamp', title: 'Masters in AI with Blockchain Technology', domain: 'Engineering' },
-  { id: 'job_cyber_blue_bootcamp', title: 'Masters in AI with Cybersecurity (Blue Team)', domain: 'DevOps' },
-  { id: 'job_cyber_red_bootcamp', title: 'Masters in AI with Cybersecurity (Red Team)', domain: 'DevOps' },
-  { id: 'job_cloud_security_bootcamp', title: 'Masters in AI with Cloud Security', domain: 'DevOps' },
-  { id: 'job_automation_bootcamp', title: 'Masters in AI Automation', domain: 'Data & AI' },
-  { id: 'job_product_management_bootcamp', title: 'Masters in AI with Product Management', domain: 'Product' },
-  { id: 'job_quantum_bootcamp', title: 'Masters in AI with Quantum Computing', domain: 'Data & AI' },
-  { id: 'job_banking_insurance_bootcamp', title: 'Masters in AI with Banking and Insurance', domain: 'Data & AI' },
-  { id: 'job_healthcare_bootcamp', title: 'Masters in AI with Healthcare', domain: 'Data & AI' },
-  { id: 'job_finance_accounting_bootcamp', title: 'Masters in AI with Finance and Accounting', domain: 'Data & AI' },
-];
-
 export const INITIAL_JOBS: Job[] = [
-  // 1. Course offerings (Bootcamps)
-  {
-    id: 'job_ai_bootcamp',
-    title: 'Masters in AI with Project Management',
-    company: 'CloudInnTech Academy',
-    location: 'Noida & Remote',
-    type: 'Full-time',
-    domain: 'Data & AI',
-    salaryRange: 'Rs 50,000 (India) · Country-wise pricing available',
-    description: 'Course offering. A comprehensive 24-week professional program building production-ready generative and agentic AI systems.',
-    requirements: ['Python Programming', 'Machine Learning Foundations', 'APIs and Integrations', 'RAG Pipelines'],
-    status: 'active',
-    postedBy: 'usr_super_admin',
-    createdAt: '2026-01-01T00:00:00Z',
-    interviewTypeDefault: 'ai'
-    ,courseInfo: CLOUDINNTECH_COURSE_INFO
-  },
-  {
-    id: 'job_devops_bootcamp',
-    title: 'Masters in AI with AWS DevOps Engineering',
-    company: 'CloudInnTech Academy',
-    location: 'Bengaluru & Remote',
-    type: 'Hybrid',
-    domain: 'DevOps',
-    salaryRange: 'Rs 50,000 (India) · Country-wise pricing available',
-    description: 'Course offering. Master CI/CD pipelines, Kubernetes scheduling, infrastructure as code, and cloud solutions automation.',
-    requirements: ['Kubernetes', 'AWS Solutions Architect', 'Docker Containerization', 'Terraform (IaC)'],
-    status: 'active',
-    postedBy: 'usr_super_admin',
-    createdAt: '2026-01-02T00:00:00Z',
-    interviewTypeDefault: 'ai',
-    courseInfo: CLOUDINNTECH_COURSE_INFO
-  },
-  ...CLOUDINNTECH_MASTERS_PROGRAMS
-    .filter((program) => program.id !== 'job_ai_bootcamp' && program.id !== 'job_devops_bootcamp')
-    .map((program) => ({
-      id: program.id,
-      title: program.title,
-      company: 'CloudInnTech Edutech',
-      location: '100% Online Live',
-      type: 'Remote' as const,
-      domain: program.domain,
-      salaryRange: 'Rs 50,000 (India) · Country-wise pricing available',
-      description: `${program.title}. Industry-focused master's program for high-demand AI careers with live training, practical labs, real-world projects, and career support.`,
-      requirements: ['Interest in AI and technology', 'Computer with internet access', 'Commitment to weekend live training'],
-      status: 'active' as const,
-      postedBy: 'usr_super_admin',
-      createdAt: '2026-01-01T00:00:00Z',
-      interviewTypeDefault: 'ai' as const,
-      courseInfo: CLOUDINNTECH_COURSE_INFO,
-    })),
-  // 2. Careers Job Postings
   {
     id: 'job_senior_dev',
-    title: 'Senior Software Developer',
+    title: 'Senior AI/ML Engineer',
     company: 'CloudInnTech Corp',
+    department: 'AI & Data Intelligence',
     location: 'Noida Office',
-    type: 'Full-time',
-    domain: 'Engineering',
-    salaryRange: '₹12,00,000 - ₹22,00,000 / yr',
-    description: 'Job Posting. Join the AI Engineering Team developing next-gen agentic workflows.',
-    requirements: ['Python', 'FastAPI', 'PyTorch', 'Docker'],
-    status: 'active',
-    postedBy: 'usr_recruiter_rahul',
+    workMode: 'hybrid',
+    employmentType: 'full_time',
+    domain: 'Data & AI',
+    salaryMin: 1800000,
+    salaryMax: 3000000,
+    salaryCurrency: 'INR',
+    description: 'We are looking for a Senior AI/ML Engineer to lead the design and implementation of next-gen agentic workflows and LLM orchestration systems.',
+    responsibilities: [
+      'Architect scalable agentic AI workflows using modern orchestration frameworks.',
+      'Deploy and optimize LLMs for structured data synthesis and extraction.',
+      'Coordinate with senior business managers to translate requirements into engineering projects.'
+    ],
+    requirements: [
+      'Demonstrated expertise with Python, PyTorch, and NLP libraries.',
+      'Experience building custom Retrieval Augmented Generation (RAG) pipelines.',
+      'Familiarity with containerized orchestration (Docker, Kubernetes).'
+    ],
+    requiredSkills: ['Python', 'LLMs', 'Vector Databases', 'Docker'],
+    preferredSkills: ['TypeScript', 'Kubernetes', 'FastAPI'],
+    minimumExperience: 5,
+    maximumExperience: 10,
+    educationRequirements: ['B.Tech or M.Tech in Computer Science or similar field'],
+    certifications: [],
+    numberOfOpenings: 2,
+    status: 'published',
+    postedBy: 'usr_super_admin',
     createdAt: '2026-01-03T00:00:00Z',
-    interviewTypeDefault: 'ai'
+    updatedAt: '2026-01-03T00:00:00Z',
+    publishedAt: '2026-01-03T00:00:00Z'
   },
   {
     id: 'job_security_analyst',
-    title: 'Cybersecurity Specialist',
+    title: 'Cloud Security Specialist',
     company: 'CloudInnTech Corp',
+    department: 'SecOps & Infrastructure',
     location: 'Remote',
-    type: 'Full-time',
+    workMode: 'remote',
+    employmentType: 'full_time',
     domain: 'DevOps',
-    salaryRange: '₹14,00,000 - ₹24,00,000 / yr',
-    description: 'Job Posting. Audit cloud security configurations and configure threat detection protocols.',
-    requirements: ['Cloud Security', 'Kubernetes Security', 'IAM auditing'],
-    status: 'active',
-    postedBy: 'usr_recruiter_john',
+    salaryMin: 1400000,
+    salaryMax: 2400000,
+    salaryCurrency: 'INR',
+    description: 'Responsible for auditing cloud security policies, building automated vulnerability checking, and managing IAM strategies.',
+    responsibilities: [
+      'Conduct regular cloud architecture vulnerability scanning and configure automated alarms.',
+      'Standardize and audit IAM roles across AWS and GCP environments.',
+      'Mitigate risks by implementing Zero Trust networking principles.'
+    ],
+    requirements: [
+      'Proven experience in AWS/GCP security management.',
+      'In-depth knowledge of Kubernetes pod security policies and networking.',
+      'Familiarity with compliance standards like SOC2 and ISO27001.'
+    ],
+    requiredSkills: ['AWS', 'Cloud Security', 'IAM auditing', 'Kubernetes'],
+    preferredSkills: ['Terraform', 'Python', 'Docker'],
+    minimumExperience: 3,
+    maximumExperience: 8,
+    educationRequirements: ['Bachelor in Cybersecurity or Computer Science'],
+    certifications: ['CISSP', 'AWS Certified Security Specialist'],
+    numberOfOpenings: 1,
+    status: 'published',
+    postedBy: 'usr_super_admin',
     createdAt: '2026-01-04T00:00:00Z',
-    interviewTypeDefault: 'ai'
+    updatedAt: '2026-01-04T00:00:00Z',
+    publishedAt: '2026-01-04T00:00:00Z'
+  },
+  {
+    id: 'job_snowflake_eng',
+    title: 'Snowflake Data Engineer',
+    company: 'CloudInnTech Corp',
+    department: 'Data Platforms',
+    location: 'Bengaluru Office',
+    workMode: 'onsite',
+    employmentType: 'full_time',
+    domain: 'Data & AI',
+    salaryMin: 1600000,
+    salaryMax: 2600000,
+    salaryCurrency: 'INR',
+    description: 'We are seeking a Snowflake Data Engineer to optimize warehouse clustering, build secure streams, and orchestrate Apache Kafka data loads.',
+    responsibilities: [
+      'Optimize Snowflake warehouse resource usage and data loading paths.',
+      'Build real-time ingestion pipelines using Kafka, Spark, and Snowflake Streams.',
+      'Maintain transactional pipeline structures for reporting intelligence.'
+    ],
+    requirements: [
+      'Advanced knowledge of Snowflake SQL dialect and clustering metrics.',
+      'Hands-on experience with Apache Spark and Kafka stream integrations.',
+      'Skilled in building modular, clean Python ETL data pipelines.'
+    ],
+    requiredSkills: ['Snowflake', 'Python', 'Spark', 'Kafka'],
+    preferredSkills: ['Java', 'dbt', 'Airflow'],
+    minimumExperience: 4,
+    maximumExperience: 9,
+    educationRequirements: ['B.E./B.Tech/M.C.A. in Computer Science or Statistics'],
+    certifications: ['SnowPro Core', 'SnowPro Advanced Architect'],
+    numberOfOpenings: 3,
+    status: 'published',
+    postedBy: 'usr_recruiter_rahul',
+    createdAt: '2026-01-05T00:00:00Z',
+    updatedAt: '2026-01-05T00:00:00Z',
+    publishedAt: '2026-01-05T00:00:00Z'
   }
 ];
 
 export const INITIAL_APPLICATIONS: Application[] = [
-  // Course applications (Visible to Admin / Super Admin)
   {
     id: 'app_priya',
-    jobId: 'job_ai_bootcamp',
+    jobId: 'job_senior_dev',
     candidateId: 'usr_candidate_priya',
     cvId: 'cv_priya',
-    status: 'shortlisted',
-    stage: 2,
+    status: 'ai_screening',
+    stage: 1,
     interviewType: 'ai',
-    appliedAt: '2026-01-03T10:00:00Z'
+    aiMatchScore: 84,
+    aiMatchReasoning: 'Candidate has python skills and standard database backgrounds matching 80%+ of requirements. Lacks PyTorch/LLM framework experience.',
+    matchedSkills: ['Python', 'SQL'],
+    missingSkills: ['LLMs', 'Vector Databases'],
+    appliedAt: '2026-01-03T10:00:00Z',
+    updatedAt: '2026-01-03T10:00:00Z'
   },
   {
     id: 'app_vikram',
-    jobId: 'job_devops_bootcamp',
+    jobId: 'job_security_analyst',
     candidateId: 'usr_candidate_vikram',
     cvId: 'cv_vikram',
-    status: 'shortlisted',
-    stage: 2,
-    interviewType: 'ai',
-    appliedAt: '2026-01-06T10:00:00Z'
+    status: 'under_review',
+    stage: 1,
+    interviewType: 'human',
+    aiMatchScore: 92,
+    aiMatchReasoning: 'Strong fit with Kubernetes experience, AWS management certifications, and hands-on vulnerability scan automation history.',
+    matchedSkills: ['AWS', 'Kubernetes', 'Cloud Security'],
+    missingSkills: ['IAM auditing'],
+    appliedAt: '2026-01-06T10:00:00Z',
+    updatedAt: '2026-01-06T10:00:00Z'
   },
-  // Job applications (Visible to recruiters)
   {
     id: 'app_amit_job',
     jobId: 'job_senior_dev',
     candidateId: 'usr_candidate_amit',
     cvId: 'no_cv',
-    status: 'applied', // Pending Review by Rahul
+    status: 'applied',
     stage: 1,
     interviewType: 'ai',
-    appliedAt: '2026-01-05T10:00:00Z'
+    aiMatchScore: 40,
+    aiMatchReasoning: 'Entry-level Python/SQL developer applying for a Senior AI/ML Engineer role. Severe gaps in minimum experience requirements (0 years vs 5 required) and lacks NLP/LLM exposure.',
+    matchedSkills: ['Python'],
+    missingSkills: ['LLMs', 'Vector Databases', 'Docker'],
+    appliedAt: '2026-01-05T10:00:00Z',
+    updatedAt: '2026-01-05T10:00:00Z'
   }
 ];
 
@@ -437,15 +449,15 @@ export const INITIAL_INTERVIEWS: InterviewRecord[] = [];
 export const INITIAL_OFFER_TEMPLATES: OfferTemplate[] = [
   {
     id: 'tmpl_standard_tech',
-    name: 'CloudInnTech Master Bootcamp Admission Confirmation',
-    companyName: 'CloudInnTech Academy',
-    headerText: 'ADMISSION LETTER — CLOUDINNTECH BOOTCAMP',
-    bodyTemplate: 'Dear {{candidate_name}},\n\nWe are thrilled to offer you admission into the {{role}} at {{company_name}}! Based on your outstanding interview performance and tech profile, we believe you are fully prepared for this rigorous cohort.\n\nYour program effective start date will be {{joining_date}}. Upon accepting, you will gain access to your Student Workspace.',
+    name: 'CloudInnTech Employment Offer Confirmation',
+    companyName: 'CloudInnTech Corp',
+    headerText: 'EMPLOYMENT OFFER LETTER — CLOUDINNTECH CORP',
+    bodyTemplate: 'Dear {{candidate_name}},\n\nWe are thrilled to offer you employment for the position of {{role}} at {{company_name}}! Based on your outstanding interview performance and deep tech profile, we believe you are fully prepared to contribute significantly to our technology division.\n\nYour effective start date will be {{joining_date}}. Your starting compensation will be {{salary}}. Upon accepting, you will gain access to your official Employee Portal.',
     benefitsList: [
-      'Interactive Live Classes & 24/7 Slack/Discord Community support',
-      'Hands-on Lab environments with GPU resources for AI Model Fine-Tuning',
-      'Blockchain-verified shareable Graduation Badge & Master Certification',
-      '1-on-1 career assistance and hiring partner catalog matching'
+      'Comprehensive Medical, Dental, and Vision Insurance plan coverage',
+      'Flexible Paid Time Off (PTO) policy and corporate holiday schedule',
+      'Remote Work Setup allowance & home office equipment grant',
+      'Annual Performance and Skill Development bonuses'
     ]
   }
 ];
