@@ -668,6 +668,12 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
+  const clearSearchChat = () => {
+    setSearchChatHistory([]);
+    setAiSearchResults(null);
+    setAiSearchCriteria(null);
+  };
+
   const scheduleScreeningCall = (
     appId: string,
     date: string,

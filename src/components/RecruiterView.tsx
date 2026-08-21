@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePortal } from '../context/PortalContext';
-import { Application, CandidateProfile, Job, ApplicationStage } from '../types/portal';
+import { Application, CandidateProfile, Job, ApplicationStage, AISearchResult } from '../types/portal';
 import {
   Search,
   CheckCircle2,
@@ -44,7 +44,8 @@ export const RecruiterView: React.FC = () => {
     searchChatHistory,
     isAiSearching,
     aiSearchResults,
-    applicationEvents
+    applicationEvents,
+    associateCandidateWithJob
   } = usePortal();
 
   // Primary navigation tab
@@ -666,7 +667,7 @@ export const RecruiterView: React.FC = () => {
 
             {aiSearchResults ? (
               <div className="space-y-3.5">
-                {Object.values(aiSearchResults).map(r => {
+                {(Object.values(aiSearchResults) as AISearchResult[]).map(r => {
                   const prof = candidateProfiles.find(p => p.userId === r.candidateId);
                   if (!prof) return null;
                   return (
