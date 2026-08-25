@@ -28,7 +28,20 @@ const MainLayout: React.FC = () => {
     return 'landing';
   });
   const [authIntent, setAuthIntent] = useState<AuthIntent | null>(null);
+  const [activeViewMode, setActiveViewMode] = useState<'admin' | 'recruiter' | 'candidate'>('admin');
   const isCandidateStudent = !!(currentUser && (currentUser.role === 'candidate' || candidateProfiles.find(p => p.userId === currentUser.id)?.enrollmentStatus === 'student'));
+
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.role === 'candidate') {
+        setActiveViewMode('candidate');
+      } else if (currentUser.role === 'recruiter') {
+        setActiveViewMode('recruiter');
+      } else {
+        setActiveViewMode('admin');
+      }
+    }
+  }, [currentUser]);
 
   // ── Auto-advance from auth gate to app once user logs in/signs up ──
   const prevUserRef = useRef<any>(currentUser);
@@ -143,9 +156,9 @@ const MainLayout: React.FC = () => {
                   <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                        {isCandidateStudent ? (
+                        {activeViewMode === 'candidate' ? (
                           <User className="w-5 h-5" />
-                        ) : currentUser.role === 'recruiter' ? (
+                        ) : activeViewMode === 'recruiter' ? (
                           <Briefcase className="w-5 h-5" />
                         ) : (
                           <Shield className="w-5 h-5" />
@@ -155,24 +168,46 @@ const MainLayout: React.FC = () => {
                         <div className="flex items-center space-x-2">
                           <span className="text-xs font-bold text-white uppercase tracking-wider">Active View:</span>
                           <span className="text-xs font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                            {currentUser.role.replace('_', ' ')}
+                            {activeViewMode.replace('_', ' ')}
                           </span>
                         </div>
                         <p className="text-xs text-slate-400 mt-0.5">
-                          {isCandidateStudent
+                          {activeViewMode === 'candidate'
                             ? 'Candidate & Student Portal — Profile, resume OCR, proctored tests, AI interviews & e-sign offer letters.'
-                            : currentUser.role === 'recruiter'
+                            : activeViewMode === 'recruiter'
                             ? 'Recruiter Dashboard — AI candidate search, Kanban pipeline, screening scheduler & offer release.'
                             : 'System Authority Panel — Team onboarding, permission matrix, AI API logs & platform config.'}
                         </p>
                       </div>
                     </div>
+
+                    {/* View Switcher Controls for Super Admin / Admin */}
+                    {(currentUser.role === 'super_admin' || currentUser.role === 'admin') && (
+                      <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+                        <button
+                          onClick={() => setActiveViewMode('admin')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            activeViewMode === 'admin' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          Admin Panel
+                        </button>
+                        <button
+                          onClick={() => setActiveViewMode('recruiter')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            activeViewMode === 'recruiter' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          Recruiter View
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Core ERP View Switcher */}
-                  {currentUser.role === 'candidate' ? (
+                  {activeViewMode === 'candidate' ? (
                     <CandidateView />
-                  ) : currentUser.role === 'recruiter' ? (
+                  ) : activeViewMode === 'recruiter' ? (
                     <RecruiterView />
                   ) : (
                     <AdminView />

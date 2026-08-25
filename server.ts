@@ -31,9 +31,11 @@ let mongoDb: any = null;
 async function connectMongo() {
   if (!mongoClient && process.env.MONGODB_URI) {
     try {
+      console.log('Connecting to MongoDB Atlas...');
       mongoClient = new MongoClient(process.env.MONGODB_URI);
       await mongoClient.connect();
       mongoDb = mongoClient.db();
+      console.log('Successfully connected to MongoDB Atlas!');
       // Setup essential indexes if not setup already
       try {
         await mongoDb.collection('users').createIndex({ email: 1 }, { unique: true });
@@ -46,6 +48,7 @@ async function connectMongo() {
         console.warn('Index generation warning:', idxErr);
       }
     } catch (err) {
+      console.error('Failed to connect to MongoDB Atlas:', err);
       mongoClient = null;
       mongoDb = null;
       throw err;

@@ -250,8 +250,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal, onEnter
                 <p className="text-xs text-slate-400 leading-relaxed">{job.description}</p>
               </div>
               <div className="mt-5 border-t border-slate-900 pt-3 flex items-center justify-between">
-                <span className="text-[10px] font-mono text-slate-500">{job.salaryRange}</span>
-                <button onClick={() => onEnterPortal('apply', job.id)} className="text-xs font-extrabold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition">
+                <span className="text-[10px] font-mono text-slate-400 capitalize">{job.employmentType?.replace('_', ' ')} · {job.workMode}</span>
+                <button onClick={() => onEnterPortal('apply', job.id)} className="text-xs font-extrabold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition cursor-pointer">
                   <span>Apply Now</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>

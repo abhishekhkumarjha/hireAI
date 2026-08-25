@@ -9,3 +9,5 @@ coverage/
 .agent/
 .tempmediaStorage/
 db.json
+
+.vercel

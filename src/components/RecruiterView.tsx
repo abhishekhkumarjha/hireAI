@@ -45,11 +45,34 @@ export const RecruiterView: React.FC = () => {
     isAiSearching,
     aiSearchResults,
     applicationEvents,
-    associateCandidateWithJob
+    associateCandidateWithJob,
+    createCandidateAndUploadCV
   } = usePortal();
 
   // Primary navigation tab
   const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'candidates' | 'applications' | 'pipeline' | 'ai_search' | 'interviews' | 'offers' | 'analytics'>('overview');
+
+  // Profile Uploading state
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [uploadCandidateName, setUploadCandidateName] = useState('');
+  const [uploadCandidateEmail, setUploadCandidateEmail] = useState('');
+  const [uploadResumeText, setUploadResumeText] = useState('');
+  const [uploadCvTitle, setUploadCvTitle] = useState('');
+  const [isParsingCv, setIsParsingCv] = useState(false);
+
+  // Editing Job state
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [editJobTitle, setEditJobTitle] = useState('');
+  const [editJobDept, setEditJobDept] = useState('');
+  const [editJobLocation, setEditJobLocation] = useState('');
+  const [editJobWorkMode, setEditJobWorkMode] = useState<'remote' | 'hybrid' | 'onsite'>('hybrid');
+  const [editJobEmpType, setEditJobEmpType] = useState<'full_time' | 'part_time' | 'contract' | 'internship'>('full_time');
+  const [editJobSalaryMin, setEditJobSalaryMin] = useState(0);
+  const [editJobSalaryMax, setEditJobSalaryMax] = useState(0);
+  const [editJobDesc, setEditJobDesc] = useState('');
+  const [editJobReqs, setEditJobReqs] = useState('');
+  const [editJobSkills, setEditJobSkills] = useState('');
+  const [editJobOpenings, setEditJobOpenings] = useState(1);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -183,6 +206,31 @@ export const RecruiterView: React.FC = () => {
     triggerToast('New technical job opening published successfully!');
   };
 
+  const handleEditJobSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingJob) return;
+    
+    const updated: Job = {
+      ...editingJob,
+      title: editJobTitle,
+      department: editJobDept,
+      location: editJobLocation,
+      workMode: editJobWorkMode,
+      employmentType: editJobEmpType,
+      salaryMin: Number(editJobSalaryMin),
+      salaryMax: Number(editJobSalaryMax),
+      description: editJobDesc,
+      requirements: editJobReqs.split('\n').filter(Boolean),
+      requiredSkills: editJobSkills.split(',').map(s => s.trim()).filter(Boolean),
+      numberOfOpenings: Number(editJobOpenings),
+      updatedAt: new Date().toISOString()
+    };
+    
+    updateJob(updated);
+    setEditingJob(null);
+    triggerToast('Job description updated successfully!');
+  };
+
   const handleScheduleInterviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeAppForInterview) return;
@@ -208,6 +256,30 @@ export const RecruiterView: React.FC = () => {
     await releaseOfferLetter(activeAppForOffer.id, offerSalary, offerJoiningDate, offerNotes);
     setActiveAppForOffer(null);
     triggerToast('Official employment offer letter released and candidate notified.');
+  };
+
+  const handleUploadProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!uploadCandidateName.trim() || !uploadCandidateEmail.trim() || !uploadResumeText.trim()) return;
+    setIsParsingCv(true);
+    try {
+      await createCandidateAndUploadCV(
+        uploadCandidateName,
+        uploadCandidateEmail,
+        uploadResumeText,
+        uploadCvTitle || `${uploadCandidateName} Resume`
+      );
+      setIsUploadingProfile(false);
+      setUploadCandidateName('');
+      setUploadCandidateEmail('');
+      setUploadResumeText('');
+      setUploadCvTitle('');
+      triggerToast('Candidate profile uploaded and resume parsed successfully!');
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload and parse profile.');
+    } finally {
+      setIsParsingCv(false);
+    }
   };
 
   // Drag and Drop implementation for Kanban board
@@ -334,7 +406,33 @@ export const RecruiterView: React.FC = () => {
                 </div>
                 <div className="flex justify-between items-center pt-4 border-t border-slate-800/80">
                   <span className="text-[10px] font-mono text-slate-500">Min Exp: {job.minimumExperience}+ yrs</span>
-                  <span className="text-[10px] font-bold text-white">₹{(job.salaryMin / 100000).toFixed(1)}L - ₹{(job.salaryMax / 100000).toFixed(1)}L</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-[10px] font-bold text-white shrink-0">
+                      {job.salaryMin === job.salaryMax 
+                        ? `₹${(job.salaryMin / 100000).toFixed(1)}LPM` 
+                        : `₹${(job.salaryMin / 100000).toFixed(1)}L-₹${(job.salaryMax / 100000).toFixed(1)}LPM`
+                      }
+                    </span>
+                    <button
+                      onClick={() => {
+                        setEditingJob(job);
+                        setEditJobTitle(job.title);
+                        setEditJobDept(job.department);
+                        setEditJobLocation(job.location);
+                        setEditJobWorkMode(job.workMode);
+                        setEditJobEmpType(job.employmentType);
+                        setEditJobSalaryMin(job.salaryMin);
+                        setEditJobSalaryMax(job.salaryMax);
+                        setEditJobDesc(job.description);
+                        setEditJobReqs(job.requirements.join('\n'));
+                        setEditJobSkills(job.requiredSkills.join(', '));
+                        setEditJobOpenings(job.numberOfOpenings);
+                      }}
+                      className="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[9px] font-bold transition cursor-pointer"
+                    >
+                      View/Edit JD
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -420,6 +518,91 @@ export const RecruiterView: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* Edit job modal */}
+          {editingJob && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">View / Edit Job Description</h3>
+                  <button onClick={() => setEditingJob(null)} className="text-slate-455 hover:text-white cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleEditJobSubmit} className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block space-y-1">
+                      <span className="text-slate-450 font-semibold">Job Title</span>
+                      <input required type="text" value={editJobTitle} onChange={e => setEditJobTitle(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus:border-indigo-500 text-white outline-none" />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-slate-455 font-semibold">Department</span>
+                      <input required type="text" value={editJobDept} onChange={e => setEditJobDept(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus:border-indigo-500 text-white outline-none" />
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="block space-y-1">
+                      <span className="text-slate-450 font-semibold">Location</span>
+                      <input required type="text" value={editJobLocation} onChange={e => setEditJobLocation(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus:border-indigo-500 text-white outline-none" />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-slate-450 font-semibold">Work Mode</span>
+                      <select value={editJobWorkMode} onChange={e => setEditJobWorkMode(e.target.value as any)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none">
+                        <option value="remote">Remote</option>
+                        <option value="hybrid">Hybrid</option>
+                        <option value="onsite">Onsite</option>
+                      </select>
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-slate-455 font-semibold">Employment Type</span>
+                      <select value={editJobEmpType} onChange={e => setEditJobEmpType(e.target.value as any)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none">
+                        <option value="full_time">Full-time</option>
+                        <option value="part_time">Part-time</option>
+                        <option value="contract">Contract</option>
+                        <option value="internship">Internship</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <label className="block space-y-1">
+                      <span className="text-slate-450 font-semibold">Budget Min (INR / mo)</span>
+                      <input type="number" value={editJobSalaryMin} onChange={e => setEditJobSalaryMin(Number(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none" />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-slate-450 font-semibold">Budget Max (INR / mo)</span>
+                      <input type="number" value={editJobSalaryMax} onChange={e => setEditJobSalaryMax(Number(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none" />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-slate-450 font-semibold">Openings</span>
+                      <input type="number" value={editJobOpenings} onChange={e => setEditJobOpenings(Number(e.target.value))} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none" />
+                    </label>
+                  </div>
+
+                  <label className="block space-y-1">
+                    <span className="text-slate-450 font-semibold">Job Description</span>
+                    <textarea required rows={4} value={editJobDesc} onChange={e => setEditJobDesc(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none resize-none" />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-slate-450 font-semibold">Requirements (One per line)</span>
+                    <textarea rows={3} value={editJobReqs} onChange={e => setEditJobReqs(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none resize-none" />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-slate-450 font-semibold">Required Skills (Comma separated)</span>
+                    <input type="text" value={editJobSkills} onChange={e => setEditJobSkills(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none" />
+                  </label>
+
+                  <button type="submit" className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-white font-extrabold shadow transition cursor-pointer">
+                    Save Changes
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -427,6 +610,17 @@ export const RecruiterView: React.FC = () => {
       {activeTab === 'candidates' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           
+          <div className="flex justify-between items-center">
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Talent & Candidate Profiles</h3>
+            <button
+              onClick={() => setIsUploadingProfile(true)}
+              className="flex items-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-bold text-white transition shadow cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Upload Candidate Profile</span>
+            </button>
+          </div>
+
           {/* Sourcing filters */}
           <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 flex flex-wrap gap-4 items-center">
             <div className="relative flex-1 min-w-[200px]">
@@ -502,7 +696,7 @@ export const RecruiterView: React.FC = () => {
                     <td className="p-4 text-right">
                       <button
                         onClick={() => setSelectedCandidateId(prof.userId)}
-                        className="px-3 py-1.5 bg-slate-950 hover:bg-slate-850 border border-slate-800 rounded-lg text-indigo-400 hover:text-indigo-300 font-bold transition"
+                        className="px-3 py-1.5 bg-slate-950 hover:bg-slate-850 border border-slate-800 rounded-lg text-indigo-400 hover:text-indigo-300 font-bold transition cursor-pointer"
                       >
                         [Open Profile]
                       </button>
@@ -512,6 +706,51 @@ export const RecruiterView: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Upload Profile Modal */}
+          {isUploadingProfile && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-fade-in">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Upload Candidate Resume Profile</h3>
+                  <button onClick={() => setIsUploadingProfile(false)} className="text-slate-455 hover:text-white cursor-pointer">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleUploadProfileSubmit} className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="block space-y-1">
+                      <span className="text-slate-450 font-semibold">Candidate Full Name</span>
+                      <input required type="text" value={uploadCandidateName} onChange={e => setUploadCandidateName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus:border-indigo-500 text-white outline-none" placeholder="e.g. Priya Patel" />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-slate-450 font-semibold">Email Address</span>
+                      <input required type="email" value={uploadCandidateEmail} onChange={e => setUploadCandidateEmail(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus:border-indigo-500 text-white outline-none" placeholder="priya@gmail.com" />
+                    </label>
+                  </div>
+
+                  <label className="block space-y-1">
+                    <span className="text-slate-450 font-semibold">Resume Title (Optional)</span>
+                    <input type="text" value={uploadCvTitle} onChange={e => setUploadCvTitle(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 focus:border-indigo-500 text-white outline-none" placeholder="e.g. Priya Patel Backend CV" />
+                  </label>
+
+                  <label className="block space-y-1">
+                    <span className="text-slate-450 font-semibold">Raw Resume Text (Will be parsed using AI)</span>
+                    <textarea required rows={8} value={uploadResumeText} onChange={e => setUploadResumeText(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white outline-none font-mono text-[11px]" placeholder="Paste candidate resume text or markdown here..." />
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={isParsingCv}
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 rounded-xl text-white font-extrabold shadow transition cursor-pointer flex items-center justify-center space-x-2"
+                  >
+                    <span>{isParsingCv ? 'Parsing Resume Text...' : 'Parse & Add Profile'}</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

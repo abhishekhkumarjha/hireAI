@@ -83,6 +83,7 @@ interface PortalContextType {
   addManualInterviewEvaluation: (appId: string, evaluation: { overallScore: number; technicalScore: number; communicationScore: number; relevanceScore: number; summary: string }) => void;
   addNotification: (userId: string, title: string, message: string, type: string) => void;
   markNotificationsAsRead: () => void;
+  createCandidateAndUploadCV: (name: string, email: string, rawText: string, cvTitle: string) => Promise<void>;
 }
 
 const PortalContext = createContext<PortalContextType | undefined>(undefined);
@@ -288,6 +289,112 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setCurrentUser(found);
       logAudit(`Switched view mode to ${role}`);
     }
+  };
+
+  const createCandidateAndUploadCV = async (
+    name: string,
+    email: string,
+    rawText: string,
+    cvTitle: string
+  ): Promise<void> => {
+    // 1. Check if user already exists
+    let existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    let candidateId = '';
+    
+    if (!existingUser) {
+      // Create new candidate user
+      const newUser: User = {
+        id: `usr_cand_${Date.now()}`,
+        name,
+        email,
+        password: 'password123', // default password
+        role: 'candidate',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
+        provider: 'email',
+        createdAt: new Date().toISOString()
+      };
+      
+      const newProfile: CandidateProfile = {
+        id: `prof_${Date.now()}`,
+        userId: newUser.id,
+        fullName: name,
+        email,
+        phone: '',
+        location: 'Remote Friendly',
+        bio: `Candidate uploaded by recruiter/admin`,
+        avatar: newUser.avatar,
+        experienceYears: 0,
+        expectedSalary: '₹8,00,055 / yr',
+        availability: 'Immediate',
+        openToWork: true,
+        domain: 'Engineering',
+        skills: [],
+        experience: [],
+        education: [],
+        certifications: [],
+        profileCompletion: 25,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      setUsers(prev => [...prev, newUser]);
+      setCandidateProfiles(prev => [...prev, newProfile]);
+      candidateId = newUser.id;
+    } else {
+      candidateId = existingUser.id;
+    }
+
+    // 2. Call parse-cv API
+    const res = await fetch(`${API_BASE}/api/parse-cv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cvText: rawText }),
+    });
+
+    const result = await res.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to parse resume');
+    }
+
+    const parsedData = result.data;
+    const newCv: CVItem = {
+      id: `cv_${Date.now()}`,
+      candidateId,
+      title: cvTitle || `${parsedData.fullName || name} Resume`,
+      isPrimary: true,
+      rawText,
+      parsedData,
+      uploadedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setCvs((prev) => [newCv, ...prev].map(c => c.candidateId === candidateId && c.id !== newCv.id ? { ...c, isPrimary: false } : c));
+
+    // Update candidate profile with parsed info
+    setCandidateProfiles((prev) =>
+      prev.map((p) =>
+        p.userId === candidateId
+          ? {
+              ...p,
+              fullName: parsedData.fullName || p.fullName,
+              email: parsedData.email || p.email,
+              phone: parsedData.phone || p.phone,
+              location: parsedData.location || p.location,
+              bio: parsedData.summary || p.bio,
+              skills: Array.from(new Set([...p.skills, ...(parsedData.skills || [])])),
+              experienceYears: parsedData.experienceYears || p.experienceYears,
+              expectedSalary: parsedData.expectedSalary || p.expectedSalary,
+              experience: parsedData.experience?.length ? parsedData.experience : p.experience,
+              education: parsedData.education?.length ? parsedData.education : p.education,
+              certifications: parsedData.certifications?.length ? parsedData.certifications : p.certifications,
+              primaryCvId: newCv.id,
+              profileCompletion: 80,
+            }
+          : p
+      )
+    );
+
+    logAudit('Uploaded Candidate Resume', newCv.title);
   };
 
   const loginUser = (email: string, password?: string): boolean => {
@@ -1010,7 +1117,8 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         addManualInterviewEvaluation,
         submitAdmissionsApplication,
         addNotification,
-        markNotificationsAsRead
+        markNotificationsAsRead,
+        createCandidateAndUploadCV
       }}
     >
       {children}
