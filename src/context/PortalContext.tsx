@@ -114,6 +114,14 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const syncCollection = async (collection: string, data: any) => {
     const dataStr = JSON.stringify(data);
+    
+    // Persist to localStorage for reliable session state
+    try {
+      localStorage.setItem(`hireai_${collection}`, dataStr);
+    } catch (e) {
+      console.warn(`Failed to save ${collection} to localStorage:`, e);
+    }
+
     if (lastSyncedRefs.current[collection] === dataStr) return;
     lastSyncedRefs.current[collection] = dataStr;
 
@@ -128,57 +136,89 @@ export const PortalProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  // Fetch remote database on startup
+  // Fetch remote database on startup with local storage fallback
   useEffect(() => {
+    const loadFromLocalStorage = () => {
+      try {
+        const localUsers = localStorage.getItem('hireai_users');
+        if (localUsers) setUsers(JSON.parse(localUsers));
+        const localProfiles = localStorage.getItem('hireai_candidateProfiles');
+        if (localProfiles) setCandidateProfiles(JSON.parse(localProfiles));
+        const localCvs = localStorage.getItem('hireai_cvs');
+        if (localCvs) setCvs(JSON.parse(localCvs));
+        const localJobs = localStorage.getItem('hireai_jobs');
+        if (localJobs) setJobs(JSON.parse(localJobs));
+        const localApps = localStorage.getItem('hireai_applications');
+        if (localApps) setApplications(JSON.parse(localApps));
+        const localInterviews = localStorage.getItem('hireai_interviews');
+        if (localInterviews) setInterviews(JSON.parse(localInterviews));
+        const localOffers = localStorage.getItem('hireai_offerLetters');
+        if (localOffers) setOfferLetters(JSON.parse(localOffers));
+        const localTemplates = localStorage.getItem('hireai_offerTemplates');
+        if (localTemplates) setOfferTemplates(JSON.parse(localTemplates));
+        const localInvites = localStorage.getItem('hireai_invites');
+        if (localInvites) setInvites(JSON.parse(localInvites));
+      } catch (e) {
+        console.error('Failed to load initial state from localStorage:', e);
+      }
+    };
+    
+    loadFromLocalStorage();
+
     const fetchDb = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/db`);
-        const result = await res.json();
-        if (result.success && result.db) {
-          const db = result.db;
-          if (db.users) {
-            setUsers(db.users);
-            lastSyncedRefs.current['users'] = JSON.stringify(db.users);
+        const text = await res.text();
+        if (text.trim().startsWith('{')) {
+          const result = JSON.parse(text);
+          if (result.success && result.db) {
+            const db = result.db;
+            if (db.users) {
+              setUsers(db.users);
+              localStorage.setItem('hireai_users', JSON.stringify(db.users));
+              lastSyncedRefs.current['users'] = JSON.stringify(db.users);
+            }
+            if (db.candidateProfiles) {
+              setCandidateProfiles(db.candidateProfiles);
+              localStorage.setItem('hireai_candidateProfiles', JSON.stringify(db.candidateProfiles));
+              lastSyncedRefs.current['candidateProfiles'] = JSON.stringify(db.candidateProfiles);
+            }
+            if (db.cvs) {
+              setCvs(db.cvs);
+              localStorage.setItem('hireai_cvs', JSON.stringify(db.cvs));
+              lastSyncedRefs.current['cvs'] = JSON.stringify(db.cvs);
+            }
+            if (db.jobs) {
+              setJobs(db.jobs);
+              localStorage.setItem('hireai_jobs', JSON.stringify(db.jobs));
+              lastSyncedRefs.current['jobs'] = JSON.stringify(db.jobs);
+            }
+            if (db.applications) {
+              setApplications(db.applications);
+              localStorage.setItem('hireai_applications', JSON.stringify(db.applications));
+              lastSyncedRefs.current['applications'] = JSON.stringify(db.applications);
+            }
+            if (db.interviews) {
+              setInterviews(db.interviews);
+              localStorage.setItem('hireai_interviews', JSON.stringify(db.interviews));
+              lastSyncedRefs.current['interviews'] = JSON.stringify(db.interviews);
+            }
+            if (db.offerTemplates) {
+              setOfferTemplates(db.offerTemplates);
+              localStorage.setItem('hireai_offerTemplates', JSON.stringify(db.offerTemplates));
+              lastSyncedRefs.current['offerTemplates'] = JSON.stringify(db.offerTemplates);
+            }
+            if (db.offerLetters) {
+              setOfferLetters(db.offerLetters);
+              localStorage.setItem('hireai_offerLetters', JSON.stringify(db.offerLetters));
+              lastSyncedRefs.current['offerLetters'] = JSON.stringify(db.offerLetters);
+            }
+            if (db.invites) {
+              setInvites(db.invites);
+              localStorage.setItem('hireai_invites', JSON.stringify(db.invites));
+              lastSyncedRefs.current['invites'] = JSON.stringify(db.invites);
+            }
           }
-          if (db.candidateProfiles) {
-            setCandidateProfiles(db.candidateProfiles);
-            lastSyncedRefs.current['candidateProfiles'] = JSON.stringify(db.candidateProfiles);
-          }
-          if (db.cvs) {
-            setCvs(db.cvs);
-            lastSyncedRefs.current['cvs'] = JSON.stringify(db.cvs);
-          }
-          if (db.jobs) {
-            setJobs(db.jobs);
-            lastSyncedRefs.current['jobs'] = JSON.stringify(db.jobs);
-          }
-          if (db.applications) {
-            setApplications(db.applications);
-            lastSyncedRefs.current['applications'] = JSON.stringify(db.applications);
-          }
-          if (db.interviews) {
-            setInterviews(db.interviews);
-            lastSyncedRefs.current['interviews'] = JSON.stringify(db.interviews);
-          }
-          if (db.offerTemplates) {
-            setOfferTemplates(db.offerTemplates);
-            lastSyncedRefs.current['offerTemplates'] = JSON.stringify(db.offerTemplates);
-          }
-          if (db.offerLetters) {
-            setOfferLetters(db.offerLetters);
-            lastSyncedRefs.current['offerLetters'] = JSON.stringify(db.offerLetters);
-          }
-          if (db.invites) {
-            setInvites(db.invites);
-            lastSyncedRefs.current['invites'] = JSON.stringify(db.invites);
-          }
-          if (db.searchChatHistory) {
-            setSearchChatHistory(db.searchChatHistory);
-            lastSyncedRefs.current['searchChatHistory'] = JSON.stringify(db.searchChatHistory);
-          }
-          if (db.notifications) setNotifications(db.notifications);
-          if (db.auditLogs) setAuditLogs(db.auditLogs);
-          if (db.applicationEvents) setApplicationEvents(db.applicationEvents);
         }
       } catch (err) {
         console.error('Failed to fetch initial database from backend:', err);
